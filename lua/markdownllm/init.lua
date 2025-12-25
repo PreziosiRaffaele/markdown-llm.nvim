@@ -109,14 +109,14 @@ local function buffer_name_exists(name)
 end
 
 local function next_chat_name()
-    local base = 'promptbook.md'
+    local base = 'markdownLLM.md'
     if not buffer_name_exists(base) then
         return base
     end
 
     local idx = 1
     while true do
-        local candidate = string.format('promptbook-%d.md', idx)
+        local candidate = string.format('markdownLLM-%d.md', idx)
         if not buffer_name_exists(candidate) then
             return candidate
         end
@@ -158,7 +158,7 @@ local function apply_setup_to_buffer(bufnr, setup)
     local buffer_setup = vim.deepcopy(setup)
     -- Remove the name from the setup config, it's not needed in the buffer
     buffer_setup.name = nil
-    vim.b[bufnr].promptbook_setup = buffer_setup
+    vim.b[bufnr].markdownllm_setup = buffer_setup
 end
 
 ---@param preset table
@@ -322,14 +322,14 @@ local function append_response(bufnr, response_text)
 end
 
 local function send_request(bufnr)
-    local setup = vim.b[bufnr].promptbook_setup
+    local setup = vim.b[bufnr].markdownllm_setup
 
     if not setup then
         logger.error('No active MarkdownLLM setup found.')
         return
     end
 
-    if vim.b[bufnr] and vim.b[bufnr].promptbook_is_sending then
+    if vim.b[bufnr] and vim.b[bufnr].markdownllm_is_sending then
         logger.warn('A request is already in progress for this buffer.')
         return
     end
@@ -347,7 +347,7 @@ local function send_request(bufnr)
         return
     end
 
-    vim.b[bufnr].promptbook_is_sending = true
+    vim.b[bufnr].markdownllm_is_sending = true
     logger.info('Sending request to Provider: ' .. setup.provider .. ', Model:' .. setup.model)
 
     local send_ok, send_err = pcall(function()
@@ -356,22 +356,22 @@ local function send_request(bufnr)
             if vim.api.nvim_buf_is_valid(bufnr) then
                 append_response(bufnr, response_text)
                 logger.debug('model text (' .. setup.provider .. ' ' .. setup.model .. '): ' .. response_text)
-                logger.info('Response appended to promptbook buffer.')
+                logger.info('Response appended to markdownLLM chat.')
             end
             if vim.api.nvim_buf_is_valid(bufnr) then
-                vim.b[bufnr].promptbook_is_sending = false
+                vim.b[bufnr].markdownllm_is_sending = false
             end
         end, function(msg)
             logger.error(msg)
             if vim.api.nvim_buf_is_valid(bufnr) then
-                vim.b[bufnr].promptbook_is_sending = false
+                vim.b[bufnr].markdownllm_is_sending = false
             end
         end)
     end)
     if not send_ok then
         logger.error('MarkdownLLM send failed: ' .. tostring(send_err))
         if vim.api.nvim_buf_is_valid(bufnr) then
-            vim.b[bufnr].promptbook_is_sending = false
+            vim.b[bufnr].markdownllm_is_sending = false
         end
     end
 end
@@ -528,7 +528,7 @@ local function open_setup_editor(target_bufnr)
         return
     end
 
-    local setup = vim.b[target_bufnr].promptbook_setup
+    local setup = vim.b[target_bufnr].markdownllm_setup
     if not setup then
         logger.error('No MarkdownLLM setup found for the current buffer.')
         return
@@ -539,7 +539,7 @@ local function open_setup_editor(target_bufnr)
     vim.bo[editor_bufnr].buftype = 'acwrite'
     vim.bo[editor_bufnr].bufhidden = 'wipe'
     vim.bo[editor_bufnr].swapfile = false
-    vim.api.nvim_buf_set_name(editor_bufnr, string.format('promptbook-setup-%d.lua', target_bufnr))
+    vim.api.nvim_buf_set_name(editor_bufnr, string.format('markdownLLM-setup-%d.lua', target_bufnr))
 
     vim.api.nvim_buf_set_lines(editor_bufnr, 0, -1, false, format_setup_for_edit(setup))
 
