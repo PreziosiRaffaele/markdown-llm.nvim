@@ -506,7 +506,7 @@ end
 ---@return string|nil
 local function parse_setup_from_lines(lines)
     local chunk = table.concat(lines, '\n')
-    local fn, err = loadstring(chunk)
+    local fn, err = load(chunk, '=(markdownllm-setup)')
     if not fn then
         return nil, err
     end
