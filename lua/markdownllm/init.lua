@@ -1,10 +1,10 @@
---- Promptbook: markdown-driven chat buffer
----@module 'rpreziosi.core.promptbook'
+--- MarkdownLLM: markdown-driven chat buffer
+---@module 'markdownllm'
 
 local M = {}
 
 local logModule = require('rpreziosi.core.logger')
-local provider_factory = require('rpreziosi.core.promptbook.provider_factory')
+local provider_factory = require('markdownllm.provider_factory')
 
 local default_config = {
     log_level = vim.log.levels.INFO,
@@ -16,7 +16,7 @@ local default_config = {
 
 local config = vim.deepcopy(default_config)
 
--- Ensure the logger has a stable name even if Promptbook is used before M.setup().
+-- Ensure the logger has a stable name even if MarkdownLLM is used before M.setup().
 local logger = logModule.new()
 
 local markdown_rule =
@@ -271,14 +271,14 @@ local function select_action(on_select)
     local actions = config.actions or {}
     if not actions or #actions == 0 then
         logger.warn(
-            'No Promptbook actions configured. Add actions in `require("rpreziosi.core.promptbook").setup({ actions = { ... } })`.'
+            'No MarkdownLLM actions configured. Add actions in `require("markdownllm").setup({ actions = { ... } })`.'
         )
         on_select(nil)
         return
     end
 
     vim.ui.select(actions, {
-        prompt = 'Select Promptbook action',
+        prompt = 'Select MarkdownLLM action',
         format_item = function(item)
             local label = item.name or '(unnamed action)'
             if item.preset then
@@ -325,7 +325,7 @@ local function send_request(bufnr)
     local setup = vim.b[bufnr].promptbook_setup
 
     if not setup then
-        logger.error('No active Promptbook setup found.')
+        logger.error('No active MarkdownLLM setup found.')
         return
     end
 
@@ -369,7 +369,7 @@ local function send_request(bufnr)
         end)
     end)
     if not send_ok then
-        logger.error('Promptbook send failed: ' .. tostring(send_err))
+        logger.error('MarkdownLLM send failed: ' .. tostring(send_err))
         if vim.api.nvim_buf_is_valid(bufnr) then
             vim.b[bufnr].promptbook_is_sending = false
         end
@@ -452,7 +452,7 @@ local function select_setup(on_select)
         return
     end
 
-    vim.ui.select(names, { prompt = 'Select Promptbook setup' }, function(choice)
+    vim.ui.select(names, { prompt = 'Select MarkdownLLM setup' }, function(choice)
         if choice then
             local setup, err = find_setup(choice)
             if not setup then
@@ -464,7 +464,7 @@ local function select_setup(on_select)
     end)
 end
 
---- Select and apply a Promptbook setup for the current buffer.
+--- Select and apply a MarkdownLLM setup for the current buffer.
 --- @param bufnr integer|nil
 --- @return nil
 local function select_buffer_setup(bufnr)
@@ -474,7 +474,7 @@ local function select_buffer_setup(bufnr)
     select_setup(function(setup)
         apply_setup_to_buffer(bufnr, setup)
         logger.info(
-            string.format('Promptbook buffer using setup "%s" (%s / %s)', setup.name, setup.provider, setup.model)
+            string.format('MarkdownLLM buffer using setup "%s" (%s / %s)', setup.name, setup.provider, setup.model)
         )
     end)
 end
@@ -490,7 +490,7 @@ end
 ---@return string[]
 local function format_setup_for_edit(setup)
     local header = {
-        '-- Promptbook buffer setup',
+        '-- MarkdownLLM buffer setup',
         '-- Edit the table and :write to apply changes to the original buffer.',
         '',
     }
@@ -530,7 +530,7 @@ local function open_setup_editor(target_bufnr)
 
     local setup = vim.b[target_bufnr].promptbook_setup
     if not setup then
-        logger.error('No Promptbook setup found for the current buffer.')
+        logger.error('No MarkdownLLM setup found for the current buffer.')
         return
     end
 
@@ -560,7 +560,7 @@ local function open_setup_editor(target_bufnr)
 
     vim.api.nvim_win_set_option(winid, 'wrap', false)
 
-    local group = vim.api.nvim_create_augroup('PromptbookSetupEditor', { clear = false })
+    local group = vim.api.nvim_create_augroup('MarkdownLLMSetupEditor', { clear = false })
 
     vim.api.nvim_create_autocmd('BufWriteCmd', {
         group = group,
@@ -573,17 +573,17 @@ local function open_setup_editor(target_bufnr)
                 return
             end
             if not vim.api.nvim_buf_is_valid(target_bufnr) then
-                logger.error('Promptbook buffer no longer exists.')
+                logger.error('MarkdownLLM buffer no longer exists.')
                 return
             end
             apply_setup_to_buffer(target_bufnr, updated)
             vim.bo[editor_bufnr].modified = false
-            logger.info('Promptbook setup updated for the buffer.')
+            logger.info('MarkdownLLM setup updated for the buffer.')
         end,
     })
 end
 
---- Configure Promptbook and register commands + default keymaps.
+--- Configure MarkdownLLM and register commands + default keymaps.
 --- @tparam table|nil opts Configuration overrides merged into defaults.
 --- @treturn nil
 function M.setup(opts)
@@ -596,58 +596,58 @@ function M.setup(opts)
         return
     end
 
-    logger = logModule.new({name = 'Promptbook', level = config.log_level})
+    logger = logModule.new({name = 'MarkdownLLM', level = config.log_level})
 
-    vim.api.nvim_create_user_command('PromptbookNew', function()
+    vim.api.nvim_create_user_command('MarkdownLLMNew', function()
         select_preset(function(preset)
             if not preset then
                 return
             end
             open_chat(preset)
         end)
-    end, { desc = 'Open a new Promptbook markdown buffer (optionally with preset)' })
+    end, { desc = 'Open a new MarkdownLLM markdown buffer (optionally with preset)' })
 
-    vim.api.nvim_create_user_command('PromptbookSend', function()
+    vim.api.nvim_create_user_command('MarkdownLLMSend', function()
         send_current_buffer()
-    end, { desc = 'Send the current Promptbook buffer to the provider' })
+    end, { desc = 'Send the current MarkdownLLM buffer to the provider' })
 
-    vim.api.nvim_create_user_command('PromptbookAction', function()
+    vim.api.nvim_create_user_command('MarkdownLLMAction', function()
         action_from_visual()
     end, { range = true, desc = 'Pick an action for the visual selection and send it' })
 
-    vim.api.nvim_create_user_command('PromptbookSelectBufferSetup', function()
+    vim.api.nvim_create_user_command('MarkdownLLMSelectBufferSetup', function()
         local buffer = vim.api.nvim_get_current_buf()
         select_buffer_setup(buffer)
-    end, { desc = 'Select the Promptbook setup for the current buffer (provider + model + options)' })
+    end, { desc = 'Select the MarkdownLLM setup for the current buffer (provider + model + options)' })
 
-    vim.api.nvim_create_user_command('PromptbookSelectDefaultSetup', function()
+    vim.api.nvim_create_user_command('MarkdownLLMSelectDefaultSetup', function()
         select_default_setup()
-    end, { desc = 'Select the Promptbook default setup' })
+    end, { desc = 'Select the MarkdownLLM default setup' })
 
-    vim.api.nvim_create_user_command('PromptbookEditBufferSetup', function()
+    vim.api.nvim_create_user_command('MarkdownLLMEditBufferSetup', function()
         local buffer = vim.api.nvim_get_current_buf()
         open_setup_editor(buffer)
-    end, { desc = 'Edit the Promptbook setup for the current buffer in a floating window' })
+    end, { desc = 'Edit the MarkdownLLM setup for the current buffer in a floating window' })
 
     if config.keymaps and config.keymaps.newChat then
-        vim.keymap.set('n', config.keymaps.newChat, ':PromptbookNew<CR>', { desc = 'New Promptbook buffer' })
+        vim.keymap.set('n', config.keymaps.newChat, ':MarkdownLLMNew<CR>', { desc = 'New MarkdownLLM buffer' })
     end
 
     if config.keymaps and config.keymaps.sendChat then
-        vim.keymap.set('n', config.keymaps.sendChat, ':PromptbookSend<CR>', { desc = 'Send Promptbook buffer' })
+        vim.keymap.set('n', config.keymaps.sendChat, ':MarkdownLLMSend<CR>', { desc = 'Send MarkdownLLM buffer' })
     end
 
     if config.keymaps and config.keymaps.setups then
         vim.keymap.set(
             'n',
             config.keymaps.setups,
-            ':PromptbookSelectBufferSetup<CR>',
-            { desc = 'Select the Promptbook setup to use for the current buffer' }
+            ':MarkdownLLMSelectBufferSetup<CR>',
+            { desc = 'Select the MarkdownLLM setup to use for the current buffer' }
         )
     end
 
     if config.keymaps and config.keymaps.actions then
-        vim.keymap.set('v', config.keymaps.actions, ":'<,'>PromptbookAction<CR>", { desc = 'Promptbook action' })
+        vim.keymap.set('v', config.keymaps.actions, ":'<,'>MarkdownLLMAction<CR>", { desc = 'MarkdownLLM action' })
     end
 end
 

@@ -1,14 +1,14 @@
 --- Provider factory for Promptbook.
 ---
 --- Maps a provider name (e.g. `gemini`, `openai`) to a provider implementation module.
----@module 'rpreziosi.core.promptbook.provider_factory'
+---@module 'markdownllm.provider_factory'
 
 local M = {}
 
 local providers = {
-    gemini = require('rpreziosi.core.promptbook.providers.gemini'),
-    grok = require('rpreziosi.core.promptbook.providers.grok'),
-    openai = require('rpreziosi.core.promptbook.providers.openai'),
+    gemini = require('markdownllm.providers.gemini'),
+    grok = require('markdownllm.providers.grok'),
+    openai = require('markdownllm.providers.openai'),
 }
 
 --- Resolve a provider implementation by name.

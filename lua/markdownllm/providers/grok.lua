@@ -1,11 +1,11 @@
---- OpenAI provider implementation for Promptbook.
+--- Grok (xAI) provider implementation for Promptbook.
 ---
 --- Responsibilities:
---- - Build OpenAI-specific payloads.
+--- - Build OpenAI-compatible payloads for Grok.
 --- - Resolve authentication (API key).
 --- - Make HTTP request.
 --- - Parse response and extract text.
----@module 'rpreziosi.core.promptbook.providers.openai'
+---@module 'markdownllm.providers.grok'
 
 local M = {}
 
@@ -36,7 +36,7 @@ local function build_payload(system_text, messages, setup)
     return payload
 end
 
---- Send a chat completion request to OpenAI.
+--- Send a chat completion request to Grok (xAI).
 --- @tparam table setup Active setup table (`{ model = ..., api_key_name = ..., base_url = ..., opts = ... }`).
 --- @tparam string system_text System/instructions block.
 --- @tparam table messages List of `{ role = "user"|"model", text = string }`.
@@ -49,15 +49,15 @@ function M.send(setup, system_text, messages, logger, on_success, on_error)
 
     local api_key = os.getenv(setup.api_key_name)
     if not api_key or api_key == '' then
-        on_error('OpenAI API key not found. Set environment variable ' .. setup.api_key_name .. '.')
+        on_error('Grok API key not found. Set environment variable ' .. (setup.api_key_name) .. '.')
         return
     end
 
     local payload = build_payload(system_text, messages, setup)
     local encoded = vim.fn.json_encode(payload)
-    local url = setup.base_url or 'https://api.openai.com/v1/chat/completions'
+    local url = setup.base_url or 'https://api.x.ai/v1/chat/completions'
 
-    logger.debug('request (openai ' .. setup.model .. '): ' .. encoded)
+    logger.debug('request (grok ' .. setup.model .. '): ' .. encoded)
 
     vim.system({
         'curl',
@@ -78,23 +78,23 @@ function M.send(setup, system_text, messages, logger, on_success, on_error)
                 return
             end
 
-            logger.debug('raw response (openai ' .. setup.model .. '): ' .. obj.stdout)
+            logger.debug('raw response (grok ' .. setup.model .. '): ' .. obj.stdout)
 
             local ok, body = pcall(vim.fn.json_decode, obj.stdout)
             if not ok then
-                on_error('Failed to decode OpenAI response: ' .. tostring(obj.stdout))
+                on_error('Failed to decode Grok response: ' .. tostring(obj.stdout))
                 return
             end
 
             if body.error then
-                on_error('OpenAI API error: ' .. (body.error.message or vim.inspect(body.error)))
+                on_error('Grok API error: ' .. (body.error.message or vim.inspect(body.error)))
                 return
             end
 
             local choice = body.choices and body.choices[1]
             local response_text = choice and choice.message and choice.message.content
             if not response_text then
-                on_error('OpenAI returned no text content. The response may have been filtered or incomplete.')
+                on_error('Grok returned no text content. The response may have been filtered or incomplete.')
                 return
             end
 

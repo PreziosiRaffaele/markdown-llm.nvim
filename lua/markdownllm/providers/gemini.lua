@@ -5,7 +5,7 @@
 --- - Resolve authentication (API key).
 --- - Make HTTP request.
 --- - Parse response and extract text.
----@module 'rpreziosi.core.promptbook.providers.gemini'
+---@module 'markdownllm.providers.gemini'
 
 local M = {}
 
