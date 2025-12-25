@@ -598,7 +598,7 @@ function M.setup(opts)
 
     logger = logModule.new({name = 'MarkdownLLM', level = config.log_level})
 
-    vim.api.nvim_create_user_command('MarkdownLLMNew', function()
+    vim.api.nvim_create_user_command('MarkdownLLMNewChat', function()
         select_preset(function(preset)
             if not preset then
                 return
@@ -607,11 +607,11 @@ function M.setup(opts)
         end)
     end, { desc = 'Open a new MarkdownLLM markdown buffer (optionally with preset)' })
 
-    vim.api.nvim_create_user_command('MarkdownLLMSend', function()
+    vim.api.nvim_create_user_command('MarkdownLLMSendChat', function()
         send_current_buffer()
     end, { desc = 'Send the current MarkdownLLM buffer to the provider' })
 
-    vim.api.nvim_create_user_command('MarkdownLLMAction', function()
+    vim.api.nvim_create_user_command('MarkdownLLMRunAction', function()
         action_from_visual()
     end, { range = true, desc = 'Pick an action for the visual selection and send it' })
 
@@ -630,24 +630,47 @@ function M.setup(opts)
     end, { desc = 'Edit the MarkdownLLM setup for the current buffer in a floating window' })
 
     if config.keymaps and config.keymaps.newChat then
-        vim.keymap.set('n', config.keymaps.newChat, ':MarkdownLLMNew<CR>', { desc = 'New MarkdownLLM buffer' })
+        vim.keymap.set('n', config.keymaps.newChat, ':MarkdownLLMNewChat<CR>', { desc = 'New MarkdownLLM buffer' })
     end
 
     if config.keymaps and config.keymaps.sendChat then
-        vim.keymap.set('n', config.keymaps.sendChat, ':MarkdownLLMSend<CR>', { desc = 'Send MarkdownLLM buffer' })
+        vim.keymap.set('n', config.keymaps.sendChat, ':MarkdownLLMSendChat<CR>', { desc = 'Send MarkdownLLM buffer' })
     end
 
-    if config.keymaps and config.keymaps.setups then
+    if config.keymaps and config.keymaps.selectBufferSetup then
         vim.keymap.set(
             'n',
-            config.keymaps.setups,
+            config.keymaps.selectBufferSetup,
             ':MarkdownLLMSelectBufferSetup<CR>',
             { desc = 'Select the MarkdownLLM setup to use for the current buffer' }
         )
     end
 
+    if config.keymaps and config.keymaps.selectDefaultSetup then
+        vim.keymap.set(
+            'n',
+            config.keymaps.selectDefaultSetup,
+            ':MarkdownLLMSelectDefaultSetup<CR>',
+            { desc = 'Select the MarkdownLLM default setup' }
+        )
+    end
+
+    if config.keymaps and config.keymaps.editBufferSetup then
+        vim.keymap.set(
+            'n',
+            config.keymaps.editBufferSetup,
+            ':MarkdownLLMEditBufferSetup<CR>',
+            { desc = 'Edit the MarkdownLLM buffer setup' }
+        )
+    end
+
     if config.keymaps and config.keymaps.actions then
-        vim.keymap.set('v', config.keymaps.actions, ":'<,'>MarkdownLLMAction<CR>", { desc = 'MarkdownLLM action' })
+        vim.keymap.set(
+            'v',
+            config.keymaps.actions,
+            ":'<,'>MarkdownLLMRunAction<CR>",
+            { desc = 'MarkdownLLM action' }
+        )
     end
 end
 

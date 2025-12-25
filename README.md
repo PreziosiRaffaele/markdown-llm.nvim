@@ -23,15 +23,22 @@ require("markdownllm").setup({
     { name = "Chat", instruction = "" },
   },
   actions = {},
-  keymaps = {},
+  keymaps = {
+    newChat = "<leader>mn",
+    sendChat = "<leader>ms",
+    selectBufferSetup = "<leader>mc",
+    selectDefaultSetup = "<leader>md",
+    editBufferSetup = "<leader>me",
+    actions = "<leader>ma",
+  },
 })
 ```
 
 ## Commands
 
-- `:MarkdownLLMNew` open a new chat buffer (optionally with a preset).
-- `:MarkdownLLMSend` send the current chat buffer to the provider.
-- `:MarkdownLLMAction` send the current visual selection using an action.
+- `:MarkdownLLMNewChat` open a new chat buffer (optionally with a preset).
+- `:MarkdownLLMSendChat` send the current chat buffer to the provider.
+- `:MarkdownLLMRunAction` send the current visual selection using an action.
 - `:MarkdownLLMSelectBufferSetup` set the setup for the current buffer.
 - `:MarkdownLLMSelectDefaultSetup` set the default setup for new buffers.
 - `:MarkdownLLMEditBufferSetup` edit the current buffer setup in a floating window.
@@ -46,7 +53,9 @@ require("markdownllm").setup({
 - `keymaps` optional command bindings:
   - `newChat`
   - `sendChat`
-  - `setups`
+  - `selectBufferSetup`
+  - `selectDefaultSetup`
+  - `editBufferSetup`
   - `actions`
 
 ## Providers
@@ -56,4 +65,3 @@ Built-in providers live under `lua/markdownllm/providers` and are resolved by na
 - `openai`
 - `gemini`
 - `grok`
-
