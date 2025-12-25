@@ -590,13 +590,18 @@ function M.setup(opts)
     config = vim.tbl_deep_extend('force', vim.deepcopy(default_config), opts or {})
 
     -- Ensure the default setup is configured
+
     local default_setup, err = get_default_setup()
     if not default_setup then
         logger.error(err)
         return
     end
 
+    -- Set log Level
+
     logger = logModule.new({name = 'MarkdownLLM', level = config.log_level})
+
+    -- Commands
 
     vim.api.nvim_create_user_command('MarkdownLLMNewChat', function()
         select_preset(function(preset)
@@ -629,20 +634,32 @@ function M.setup(opts)
         open_setup_editor(buffer)
     end, { desc = 'Edit the MarkdownLLM setup for the current buffer in a floating window' })
 
+    -- Keymaps
+
     if config.keymaps and config.keymaps.newChat then
-        vim.keymap.set('n', config.keymaps.newChat, ':MarkdownLLMNewChat<CR>', { desc = 'New MarkdownLLM buffer' })
+        vim.keymap.set(
+            'n',
+            config.keymaps.newChat,
+            ':MarkdownLLMNewChat<CR>',
+            { desc = 'New MarkdownLLM chat' }
+        )
     end
 
     if config.keymaps and config.keymaps.sendChat then
-        vim.keymap.set('n', config.keymaps.sendChat, ':MarkdownLLMSendChat<CR>', { desc = 'Send MarkdownLLM buffer' })
-    end
-
-    if config.keymaps and config.keymaps.selectBufferSetup then
         vim.keymap.set(
             'n',
-            config.keymaps.selectBufferSetup,
+            config.keymaps.sendChat,
+            ':MarkdownLLMSendChat<CR>',
+            { desc = 'Send MarkdownLLM message' }
+        )
+    end
+
+    if config.keymaps and config.keymaps.selectChatSetup then
+        vim.keymap.set(
+            'n',
+            config.keymaps.selectChatSetup,
             ':MarkdownLLMSelectBufferSetup<CR>',
-            { desc = 'Select the MarkdownLLM setup to use for the current buffer' }
+            { desc = 'Select the MarkdownLLM setup to use for the current chat' }
         )
     end
 
