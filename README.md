@@ -1,6 +1,8 @@
 # MarkdownLLM
 
-Markdown-driven chat buffers for Neovim.
+MarkdownLLM is a Neovim plugin that provides a simple interface for interacting with LLM providers.
+
+
 
 ## Install
 
@@ -30,6 +32,7 @@ require("markdownllm").setup({
     selectDefaultSetup = "<leader>md",
     editBufferSetup = "<leader>me",
     actions = "<leader>ma",
+    saveChat = "<leader>mw",
   },
 })
 ```
@@ -42,6 +45,7 @@ require("markdownllm").setup({
 - `:MarkdownLLMSelectBufferSetup` set the setup for the current buffer.
 - `:MarkdownLLMSelectDefaultSetup` set the default setup for new buffers.
 - `:MarkdownLLMEditBufferSetup` edit the current buffer setup in a floating window.
+- `:MarkdownLLMSaveChat` save the current chat buffer to disk.
 
 ## Configuration
 
@@ -50,6 +54,7 @@ require("markdownllm").setup({
 - `setups` list of provider/model setups.
 - `presets` list of prompt presets (optional instruction + setup name).
 - `actions` list of actions used for visual selection prompts.
+- `chat_save_dir` directory for saved chats (default: `stdpath("data")/markdownllm/chats`).
 - `keymaps` optional command bindings:
   - `newChat`
   - `sendChat`
@@ -57,6 +62,7 @@ require("markdownllm").setup({
   - `selectDefaultSetup`
   - `editBufferSetup`
   - `actions`
+  - `saveChat`
 
 ## Providers
 

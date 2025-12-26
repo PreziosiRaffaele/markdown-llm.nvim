@@ -12,6 +12,7 @@ local default_config = {
     presets = {},
     actions = {},
     keymaps = {},
+    chat_save_dir = vim.fn.stdpath('data') .. '/markdownllm/chats',
 }
 
 local config = vim.deepcopy(default_config)
@@ -122,6 +123,29 @@ local function next_chat_name()
         end
         idx = idx + 1
     end
+end
+
+local function ensure_chat_save_dir(path)
+    if not path or path == '' then
+        return nil, 'Chat save directory is not configured.'
+    end
+    local ok, err = pcall(vim.fn.mkdir, path, 'p')
+    if not ok then
+        return nil, err
+    end
+    return path, nil
+end
+
+local function sanitize_chat_filename(name)
+    local trimmed = trim(name or '')
+    if trimmed == '' then
+        return nil
+    end
+    local base = vim.fn.fnamemodify(trimmed, ':t')
+    if not base:match('%.md$') then
+        base = base .. '.md'
+    end
+    return base
 end
 
 local function find_setup(name)
@@ -412,6 +436,36 @@ local function send_current_buffer()
     send_request(bufnr)
 end
 
+local function save_current_buffer()
+    local bufnr = vim.api.nvim_get_current_buf()
+    local save_dir, err = ensure_chat_save_dir(config.chat_save_dir)
+    if not save_dir then
+        logger.error(err)
+        return
+    end
+
+    local input_name = vim.fn.input('Chat name: ')
+    local filename = sanitize_chat_filename(input_name)
+    if not filename then
+        logger.info('Chat save cancelled.')
+        return
+    end
+
+    local path = save_dir .. '/' .. filename
+    if vim.loop.fs_stat(path) then
+        logger.error('Chat file already exists: ' .. path)
+        return
+    end
+
+    local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+    local ok, write_err = pcall(vim.fn.writefile, lines, path)
+    if not ok then
+        logger.error('Failed to save chat: ' .. tostring(write_err))
+        return
+    end
+    logger.info('Chat saved to ' .. path)
+end
+
 local function action_from_visual()
     local selection_text = get_visual_selection_text()
     logger.trace('Visual selection text: ' .. tostring(selection_text))
@@ -634,6 +688,10 @@ function M.setup(opts)
         open_setup_editor(buffer)
     end, { desc = 'Edit the MarkdownLLM setup for the current buffer in a floating window' })
 
+    vim.api.nvim_create_user_command('MarkdownLLMSaveChat', function()
+        save_current_buffer()
+    end, { desc = 'Save the current MarkdownLLM buffer to a file' })
+
     -- Keymaps
 
     if config.keymaps and config.keymaps.newChat then
@@ -687,6 +745,15 @@ function M.setup(opts)
             config.keymaps.actions,
             ":'<,'>MarkdownLLMRunAction<CR>",
             { desc = 'MarkdownLLM action' }
+        )
+    end
+
+    if config.keymaps and config.keymaps.saveChat then
+        vim.keymap.set(
+            'n',
+            config.keymaps.saveChat,
+            ':MarkdownLLMSaveChat<CR>',
+            { desc = 'Save MarkdownLLM chat' }
         )
     end
 end
