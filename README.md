@@ -55,13 +55,29 @@ require("markdownllm").setup({
 - `:MarkdownLLMSaveChat` save the current chat buffer to disk.
 - `:MarkdownLLMResumeChat` resume a saved chat from disk.
 
+Help docs are available in `doc/markdownllm.txt` after running `:helptags`.
+
 ## Configuration
 
 - `log_level` logger level (default: `vim.log.levels.INFO`).
 - `default_setup_name` name of the default setup used for new chats.
-- `setups` list of provider/model setups.
-- `presets` list of prompt presets (optional instruction + setup name).
-- `actions` list of actions used for visual selection prompts.
+- `setups` list of provider/model setups:
+  - `name` unique label used in selectors.
+  - `provider` provider name: `openai`, `gemini`, `grok`.
+  - `model` model id passed to the provider.
+  - `api_key_name` environment variable containing the API key.
+  - `base_url` optional override for OpenAI/Grok endpoints.
+  - `opts` provider-specific options merged into payload.
+- `presets` list of prompt presets used to seed new chats:
+  - `name` label shown in the preset selector.
+  - `instruction` content injected under the `# System` section.
+  - `setup` setup name override; defaults to `default_setup_name`.
+- `actions` list of actions used for visual selection prompts:
+  - `name` label shown in the action selector.
+  - `preset` preset name to open; defaults to the first preset.
+  - `type` `text` (default) or `code`; `code` wraps the selection in a fenced code block.
+  - `language` optional code fence language when `type = "code"`; defaults to the current buffer filetype.
+  - `pre_text` text prepended before the selection.
 - `chat_save_dir` directory for saved chats (default: `stdpath("data")/markdownllm/chats`).
 - `keymaps` optional command bindings:
   - `newChat`

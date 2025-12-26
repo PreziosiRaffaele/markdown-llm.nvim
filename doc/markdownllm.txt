@@ -1,0 +1,139 @@
+*markdownllm.txt*  Markdown-based LLM chat for Neovim
+
+==============================================================================
+MarkdownLLM                                                     *markdownllm*
+
+MarkdownLLM is a Neovim plugin that provides a markdown-driven interface for
+interacting with LLM providers. It focuses on explicit, editable context inside
+normal buffers rather than an opaque agent workflow.
+
+==============================================================================
+Installation                                                   *markdownllm-install*
+
+Use your plugin manager and load the module in your config:
+>
+  require("markdownllm").setup({
+    log_level = vim.log.levels.INFO,
+    default_setup_name = "default",
+    setups = {
+      {
+        name = "default",
+        provider = "openai",
+        model = "gpt-4o-mini",
+        api_key_name = "OPENAI_API_KEY",
+        opts = {},
+      },
+    },
+    presets = {
+      { name = "Chat", instruction = "" },
+    },
+    actions = {},
+    keymaps = {
+      newChat = "<leader>mn",
+      sendChat = "<leader>ms",
+      selectBufferSetup = "<leader>mc",
+      selectDefaultSetup = "<leader>md",
+      editBufferSetup = "<leader>me",
+      actions = "<leader>ma",
+      saveChat = "<leader>mw",
+      resumeChat = "<leader>mr",
+    },
+  })
+<
+
+==============================================================================
+Commands                                                     *markdownllm-commands*
+
+:MarkdownLLMNewChat
+    Open a new chat buffer (optionally with a preset).
+
+:MarkdownLLMSendChat
+    Send the current chat buffer to the provider.
+
+:MarkdownLLMRunAction
+    Send the current visual selection using an action.
+
+:MarkdownLLMSelectBufferSetup
+    Set the setup for the current buffer.
+
+:MarkdownLLMSelectDefaultSetup
+    Set the default setup for new buffers.
+
+:MarkdownLLMEditBufferSetup
+    Edit the current buffer setup in a floating window.
+
+:MarkdownLLMSaveChat
+    Save the current chat buffer to disk.
+
+:MarkdownLLMResumeChat
+    Resume a saved chat from disk.
+
+==============================================================================
+Configuration                                                *markdownllm-config*
+
+The setup table supports:
+
+log_level
+    Logger level (default: vim.log.levels.INFO).
+
+default_setup_name
+    Name of the default setup used for new chats.
+
+setups
+    List of provider/model setups. Each setup is a table with:
+      name          (string) unique label used in selectors.
+      provider      (string) provider name: "openai", "gemini", "grok".
+      model         (string) model id passed to the provider.
+      api_key_name  (string) environment variable containing the API key.
+      base_url      (string|nil) optional override for OpenAI/Grok endpoints.
+      opts          (table|nil) provider-specific options merged into payload.
+
+presets
+    List of prompt presets used to seed new chats. Each preset is a table with:
+      name         (string) label shown in the preset selector.
+      instruction  (string|nil) content injected under the "# System" section.
+      setup        (string|nil) setup name override; defaults to default_setup_name.
+
+actions
+    List of actions used for visual selection prompts. Each action is a table with:
+      name      (string) label shown in the action selector.
+      preset    (string|nil) preset name to open; defaults to first preset.
+      type      (string|nil) "text" (default) or "code"; "code" wraps the
+                selection in a fenced code block, "text" inserts raw text.
+      language  (string|nil) optional code fence language when type = "code";
+                defaults to the current buffer filetype when omitted.
+      pre_text  (string|nil) text prepended before the selection.
+
+chat_save_dir
+    Directory for saved chats (default: stdpath("data") .. "/markdownllm/chats").
+
+keymaps
+    Optional command bindings.
+
+Keymap fields:
+    newChat
+    sendChat
+    selectBufferSetup
+    selectDefaultSetup
+    editBufferSetup
+    actions
+    saveChat
+    resumeChat
+
+==============================================================================
+Providers                                                  *markdownllm-providers*
+
+Built-in providers live under lua/markdownllm/providers and are resolved by
+name:
+
+    openai
+    gemini
+    grok
+
+==============================================================================
+Notes                                                        *markdownllm-notes*
+
+- After installing, run :helptags to generate help tags for this file.
+
+==============================================================================
+vim:tw=78:ts=2:et:ft=help
