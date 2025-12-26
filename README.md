@@ -39,6 +39,7 @@ require("markdownllm").setup({
     editBufferSetup = "<leader>me",
     actions = "<leader>ma",
     saveChat = "<leader>mw",
+    resumeChat = "<leader>mr",
   },
 })
 ```
@@ -52,6 +53,7 @@ require("markdownllm").setup({
 - `:MarkdownLLMSelectDefaultSetup` set the default setup for new buffers.
 - `:MarkdownLLMEditBufferSetup` edit the current buffer setup in a floating window.
 - `:MarkdownLLMSaveChat` save the current chat buffer to disk.
+- `:MarkdownLLMResumeChat` resume a saved chat from disk.
 
 ## Configuration
 
@@ -69,6 +71,7 @@ require("markdownllm").setup({
   - `editBufferSetup`
   - `actions`
   - `saveChat`
+  - `resumeChat`
 
 ## Providers
 

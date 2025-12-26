@@ -148,6 +148,23 @@ local function sanitize_chat_filename(name)
     return base
 end
 
+---@param path string
+---@return string[]|nil
+---@return string|nil
+local function list_saved_chats(path)
+    if not path or path == '' then
+        return nil, 'Chat save directory is not configured.'
+    end
+
+    local files = vim.fn.globpath(path, '*.md', false, true)
+    if type(files) ~= 'table' then
+        return nil, 'Failed to list saved chats in ' .. path
+    end
+
+    table.sort(files)
+    return files, nil
+end
+
 local function find_setup(name)
     for _, setup in ipairs(config.setups or {}) do
         if setup.name == name then
@@ -466,6 +483,55 @@ local function save_current_buffer()
     logger.info('Chat saved to ' .. path)
 end
 
+--- Resume a saved MarkdownLLM chat file and apply the default setup.
+--- @return nil
+local function resume_saved_chat()
+    local save_dir, err = ensure_chat_save_dir(config.chat_save_dir)
+    if not save_dir then
+        logger.error(err)
+        return
+    end
+
+    local files, list_err = list_saved_chats(save_dir)
+    if not files then
+        logger.error(list_err)
+        return
+    end
+
+    if #files == 0 then
+        logger.info('No saved chats found in ' .. save_dir)
+        return
+    end
+
+    local items = {}
+    for _, path in ipairs(files) do
+        table.insert(items, { path = path, label = vim.fn.fnamemodify(path, ':t') })
+    end
+
+    vim.ui.select(items, {
+        prompt = 'Select MarkdownLLM chat to resume',
+        format_item = function(item)
+            return item.label
+        end,
+    }, function(choice)
+        if not choice then
+            return
+        end
+
+        local setup, setup_err = get_default_setup()
+        if not setup then
+            logger.error(setup_err)
+            return
+        end
+
+        vim.cmd('edit ' .. vim.fn.fnameescape(choice.path))
+        local bufnr = vim.api.nvim_get_current_buf()
+        vim.bo[bufnr].filetype = 'markdown'
+        apply_setup_to_buffer(bufnr, setup)
+        logger.info('Resumed MarkdownLLM chat: ' .. choice.label)
+    end)
+end
+
 local function action_from_visual()
     local selection_text = get_visual_selection_text()
     logger.trace('Visual selection text: ' .. tostring(selection_text))
@@ -692,6 +758,10 @@ function M.setup(opts)
         save_current_buffer()
     end, { desc = 'Save the current MarkdownLLM buffer to a file' })
 
+    vim.api.nvim_create_user_command('MarkdownLLMResumeChat', function()
+        resume_saved_chat()
+    end, { desc = 'Resume a saved MarkdownLLM chat from disk' })
+
     -- Keymaps
 
     if config.keymaps and config.keymaps.newChat then
@@ -754,6 +824,15 @@ function M.setup(opts)
             config.keymaps.saveChat,
             ':MarkdownLLMSaveChat<CR>',
             { desc = 'Save MarkdownLLM chat' }
+        )
+    end
+
+    if config.keymaps and config.keymaps.resumeChat then
+        vim.keymap.set(
+            'n',
+            config.keymaps.resumeChat,
+            ':MarkdownLLMResumeChat<CR>',
+            { desc = 'Resume MarkdownLLM chat' }
         )
     end
 end
