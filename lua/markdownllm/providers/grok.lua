@@ -8,6 +8,7 @@
 ---@module 'markdownllm.providers.grok'
 
 local M = {}
+local logger = require('markdownllm.logger')
 
 local function build_payload(system_text, messages, setup)
     local opts = setup.opts or {}
@@ -40,11 +41,10 @@ end
 --- @tparam table setup Active setup table (`{ model = ..., api_key_name = ..., base_url = ..., opts = ... }`).
 --- @tparam string system_text System/instructions block.
 --- @tparam table messages List of `{ role = "user"|"model", text = string }`.
---- @tparam table logger Logger instance.
 --- @tparam function|nil on_success Callback `(response_text:string)`.
 --- @tparam function|nil on_error Callback `(message:string)` (defaults to `logger.error`).
 --- @treturn nil
-function M.send(setup, system_text, messages, logger, on_success, on_error)
+function M.send(setup, system_text, messages, on_success, on_error)
     on_error = on_error or logger.error
 
     local api_key = os.getenv(setup.api_key_name)

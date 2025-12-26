@@ -3,7 +3,7 @@
 
 local M = {}
 
-local logModule = require('rpreziosi.core.logger')
+local logger = require('markdownllm.logger')
 local provider_factory = require('markdownllm.provider_factory')
 
 local default_config = {
@@ -17,8 +17,6 @@ local default_config = {
 
 local config = vim.deepcopy(default_config)
 
--- Ensure the logger has a stable name even if MarkdownLLM is used before M.setup().
-local logger = logModule.new()
 
 local markdown_rule =
 'All output must be in plain Markdown (no HTML) so it renders correctly in a Neovim markdown buffer.'
@@ -392,7 +390,7 @@ local function send_request(bufnr)
     logger.info('Sending request to Provider: ' .. setup.provider .. ', Model:' .. setup.model)
 
     local send_ok, send_err = pcall(function()
-        implementation.send(setup, system_text, messages, logger, function(response_text)
+        implementation.send(setup, system_text, messages, function(response_text)
             -- Ensure buffer still exists and is valid before appending
             if vim.api.nvim_buf_is_valid(bufnr) then
                 append_response(bufnr, response_text)
@@ -719,7 +717,7 @@ function M.setup(opts)
 
     -- Set log Level
 
-    logger = logModule.new({name = 'MarkdownLLM', level = config.log_level})
+    logger.configure({ level = config.log_level })
 
     -- Commands
 
