@@ -96,3 +96,7 @@ Built-in providers live under `lua/markdownllm/providers` and are resolved by na
 - `openai`
 - `gemini`
 - `grok`
+
+## License
+
+MIT. See `LICENSE`.
