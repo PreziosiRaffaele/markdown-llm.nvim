@@ -18,9 +18,6 @@ local default_config = {
 local config = vim.deepcopy(default_config)
 
 
-local markdown_rule =
-'All output must be in plain Markdown (no HTML) so it renders correctly in a Neovim markdown buffer.'
-
 local function trim(text)
     return (text:gsub('^%s+', ''):gsub('%s+$', ''))
 end
@@ -35,7 +32,6 @@ local function chat_template(instruction_text)
         vim.list_extend(template, lines)
     end
 
-    table.insert(template, '- ' .. markdown_rule)
     table.insert(template, '')
     table.insert(template, '# Conversation')
     table.insert(template, '## User')
