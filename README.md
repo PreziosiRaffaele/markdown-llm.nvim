@@ -34,9 +34,9 @@ require("markdownllm").setup({
   keymaps = {
     newChat = "<leader>mn",
     sendChat = "<leader>ms",
-    selectBufferSetup = "<leader>mc",
+    selectChatSetup = "<leader>mc",
     selectDefaultSetup = "<leader>md",
-    editBufferSetup = "<leader>me",
+    editChatSetup = "<leader>me",
     actions = "<leader>ma",
     saveChat = "<leader>mw",
     resumeChat = "<leader>mr",
@@ -46,14 +46,14 @@ require("markdownllm").setup({
 
 ## Commands
 
-- `:MarkdownLLMNewChat` open a new chat buffer (optionally with a preset).
-- `:MarkdownLLMSendChat` send the current chat buffer to the provider.
-- `:MarkdownLLMRunAction` send the current visual selection using an action.
-- `:MarkdownLLMSelectBufferSetup` set the setup for the current buffer.
-- `:MarkdownLLMSelectDefaultSetup` set the default setup for new buffers.
-- `:MarkdownLLMEditBufferSetup` edit the current buffer setup in a floating window.
-- `:MarkdownLLMSaveChat` save the current chat buffer to disk.
-- `:MarkdownLLMResumeChat` resume a saved chat from disk.
+- `:MarkLLMNewChat` open a new chat buffer (optionally with a preset).
+- `:MarkLLMSendChat` send the current chat buffer to the provider.
+- `:MarkLLMRunAction` send the current visual selection using an action.
+- `:MarkLLMSelectBufferSetup` set the setup for the current buffer.
+- `:MarkLLMSelectDefaultSetup` set the default setup for new buffers.
+- `:MarkLLMEditChatSetup` edit the current chat setup in a floating window.
+- `:MarkLLMSaveChat` save the current chat buffer to disk.
+- `:MarkLLMResumeChat` resume a saved chat from disk.
 
 Help docs are available in `doc/markdownllm.txt` after running `:helptags`.
 
@@ -84,7 +84,7 @@ Help docs are available in `doc/markdownllm.txt` after running `:helptags`.
   - `sendChat`
   - `selectBufferSetup`
   - `selectDefaultSetup`
-  - `editBufferSetup`
+  - `editChatSetup`
   - `actions`
   - `saveChat`
   - `resumeChat`

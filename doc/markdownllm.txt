@@ -31,9 +31,9 @@ Use your plugin manager and load the module in your config:
     keymaps = {
       newChat = "<leader>mn",
       sendChat = "<leader>ms",
-      selectBufferSetup = "<leader>mc",
+      selectChatSetup = "<leader>mc",
       selectDefaultSetup = "<leader>md",
-      editBufferSetup = "<leader>me",
+      editChatSetup = "<leader>me",
       actions = "<leader>ma",
       saveChat = "<leader>mw",
       resumeChat = "<leader>mr",
@@ -44,28 +44,28 @@ Use your plugin manager and load the module in your config:
 ==============================================================================
 Commands                                                     *markdownllm-commands*
 
-:MarkdownLLMNewChat
+:MarkLLMNewChat
     Open a new chat buffer (optionally with a preset).
 
-:MarkdownLLMSendChat
+:MarkLLMSendChat
     Send the current chat buffer to the provider.
 
-:MarkdownLLMRunAction
+:MarkLLMRunAction
     Send the current visual selection using an action.
 
-:MarkdownLLMSelectBufferSetup
+:MarkLLMSelectBufferSetup
     Set the setup for the current buffer.
 
-:MarkdownLLMSelectDefaultSetup
+:MarkLLMSelectDefaultSetup
     Set the default setup for new buffers.
 
-:MarkdownLLMEditBufferSetup
-    Edit the current buffer setup in a floating window.
+:MarkLLMEditChatSetup
+    Edit the current chat setup in a floating window.
 
-:MarkdownLLMSaveChat
+:MarkLLMSaveChat
     Save the current chat buffer to disk.
 
-:MarkdownLLMResumeChat
+:MarkLLMResumeChat
     Resume a saved chat from disk.
 
 ==============================================================================
@@ -115,7 +115,7 @@ Keymap fields:
     sendChat
     selectBufferSetup
     selectDefaultSetup
-    editBufferSetup
+    editChatSetup
     actions
     saveChat
     resumeChat

@@ -721,44 +721,44 @@ function M.setup(opts)
 
     -- Commands
 
-    vim.api.nvim_create_user_command('MarkdownLLMNewChat', function()
+    vim.api.nvim_create_user_command('MarkLLMNewChat', function()
         select_preset(function(preset)
             if not preset then
                 return
             end
             open_chat(preset)
         end)
-    end, { desc = 'Open a new MarkdownLLM markdown buffer (optionally with preset)' })
+    end, { desc = 'New chat' })
 
-    vim.api.nvim_create_user_command('MarkdownLLMSendChat', function()
+    vim.api.nvim_create_user_command('MarkLLMSendChat', function()
         send_current_buffer()
-    end, { desc = 'Send the current MarkdownLLM buffer to the provider' })
+    end, { desc = 'Send chat' })
 
-    vim.api.nvim_create_user_command('MarkdownLLMRunAction', function()
+    vim.api.nvim_create_user_command('MarkLLMRunAction', function()
         action_from_visual()
-    end, { range = true, desc = 'Pick an action for the visual selection and send it' })
+    end, { range = true, desc = 'Run action' })
 
-    vim.api.nvim_create_user_command('MarkdownLLMSelectBufferSetup', function()
+    vim.api.nvim_create_user_command('MarkLLMSelectBufferSetup', function()
         local buffer = vim.api.nvim_get_current_buf()
         select_buffer_setup(buffer)
-    end, { desc = 'Select the MarkdownLLM setup for the current buffer (provider + model + options)' })
+    end, { desc = 'Select chat setup' })
 
-    vim.api.nvim_create_user_command('MarkdownLLMSelectDefaultSetup', function()
+    vim.api.nvim_create_user_command('MarkLLMSelectDefaultSetup', function()
         select_default_setup()
-    end, { desc = 'Select the MarkdownLLM default setup' })
+    end, { desc = 'Select default setup' })
 
-    vim.api.nvim_create_user_command('MarkdownLLMEditBufferSetup', function()
+    vim.api.nvim_create_user_command('MarkLLMEditChatSetup', function()
         local buffer = vim.api.nvim_get_current_buf()
         open_setup_editor(buffer)
-    end, { desc = 'Edit the MarkdownLLM setup for the current buffer in a floating window' })
+    end, { desc = 'Edit chat setup' })
 
-    vim.api.nvim_create_user_command('MarkdownLLMSaveChat', function()
+    vim.api.nvim_create_user_command('MarkLLMSaveChat', function()
         save_current_buffer()
-    end, { desc = 'Save the current MarkdownLLM buffer to a file' })
+    end, { desc = 'Save chat' })
 
-    vim.api.nvim_create_user_command('MarkdownLLMResumeChat', function()
+    vim.api.nvim_create_user_command('MarkLLMResumeChat', function()
         resume_saved_chat()
-    end, { desc = 'Resume a saved MarkdownLLM chat from disk' })
+    end, { desc = 'Resume chat' })
 
     -- Keymaps
 
@@ -766,8 +766,8 @@ function M.setup(opts)
         vim.keymap.set(
             'n',
             config.keymaps.newChat,
-            ':MarkdownLLMNewChat<CR>',
-            { desc = 'New MarkdownLLM chat' }
+            ':MarkLLMNewChat<CR>',
+            { desc = 'New chat' }
         )
     end
 
@@ -775,8 +775,8 @@ function M.setup(opts)
         vim.keymap.set(
             'n',
             config.keymaps.sendChat,
-            ':MarkdownLLMSendChat<CR>',
-            { desc = 'Send MarkdownLLM message' }
+            ':MarkLLMSendChat<CR>',
+            { desc = 'Send chat' }
         )
     end
 
@@ -784,8 +784,8 @@ function M.setup(opts)
         vim.keymap.set(
             'n',
             config.keymaps.selectChatSetup,
-            ':MarkdownLLMSelectBufferSetup<CR>',
-            { desc = 'Select the MarkdownLLM setup to use for the current chat' }
+            ':MarkLLMSelectBufferSetup<CR>',
+            { desc = 'Select chat setup' }
         )
     end
 
@@ -793,17 +793,17 @@ function M.setup(opts)
         vim.keymap.set(
             'n',
             config.keymaps.selectDefaultSetup,
-            ':MarkdownLLMSelectDefaultSetup<CR>',
-            { desc = 'Select the MarkdownLLM default setup' }
+            ':MarkLLMSelectDefaultSetup<CR>',
+            { desc = 'Select default setup' }
         )
     end
 
-    if config.keymaps and config.keymaps.editBufferSetup then
+    if config.keymaps and config.keymaps.editChatSetup then
         vim.keymap.set(
             'n',
-            config.keymaps.editBufferSetup,
-            ':MarkdownLLMEditBufferSetup<CR>',
-            { desc = 'Edit the MarkdownLLM buffer setup' }
+            config.keymaps.editChatSetup,
+            ':MarkLLMEditChatSetup<CR>',
+            { desc = 'Edit chat setup' }
         )
     end
 
@@ -811,8 +811,8 @@ function M.setup(opts)
         vim.keymap.set(
             'v',
             config.keymaps.actions,
-            ":'<,'>MarkdownLLMRunAction<CR>",
-            { desc = 'MarkdownLLM action' }
+            ":'<,'>MarkLLMRunAction<CR>",
+            { desc = 'Run action' }
         )
     end
 
@@ -820,8 +820,8 @@ function M.setup(opts)
         vim.keymap.set(
             'n',
             config.keymaps.saveChat,
-            ':MarkdownLLMSaveChat<CR>',
-            { desc = 'Save MarkdownLLM chat' }
+            ':MarkLLMSaveChat<CR>',
+            { desc = 'Save chat' }
         )
     end
 
@@ -829,8 +829,8 @@ function M.setup(opts)
         vim.keymap.set(
             'n',
             config.keymaps.resumeChat,
-            ':MarkdownLLMResumeChat<CR>',
-            { desc = 'Resume MarkdownLLM chat' }
+            ':MarkLLMResumeChat<CR>',
+            { desc = 'Resume chat' }
         )
     end
 end
