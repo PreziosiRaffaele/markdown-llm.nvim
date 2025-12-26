@@ -1,4 +1,4 @@
---- Provider factory for Promptbook.
+--- Provider factory for MarkdownLLM.
 ---
 --- Maps a provider name (e.g. `gemini`, `openai`) to a provider implementation module.
 ---@module 'markdownllm.provider_factory'

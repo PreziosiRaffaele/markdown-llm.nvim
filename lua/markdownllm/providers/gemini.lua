@@ -1,4 +1,4 @@
---- Gemini provider implementation for Promptbook.
+--- Gemini provider implementation for MarkdownLLM.
 ---
 --- Responsibilities:
 --- - Build Gemini-specific payloads.

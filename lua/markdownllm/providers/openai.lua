@@ -1,4 +1,4 @@
---- OpenAI provider implementation for Promptbook.
+--- OpenAI provider implementation for MarkdownLLM.
 ---
 --- Responsibilities:
 --- - Build OpenAI-specific payloads.

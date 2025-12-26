@@ -1,4 +1,4 @@
---- Grok (xAI) provider implementation for Promptbook.
+--- Grok (xAI) provider implementation for MarkdownLLM.
 ---
 --- Responsibilities:
 --- - Build OpenAI-compatible payloads for Grok.
