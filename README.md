@@ -1,9 +1,15 @@
 # MarkdownLLM
+**MarkdownLLM** is a Neovim plugin that provides a simple, markdown-driven interface for interacting with LLM providers. 
 
-MarkdownLLM is a Neovim plugin that provides a simple interface for interacting with LLM providers.
+Recently, there has been a proliferation of LLM interaction tools designed as agents (e.g., cursor, claude-code, codex, gemini-cli). While these tools can accelerate workflows, they often lack clear and explicit control over the context provided to the LLM, they operate as "black boxes".
 
+There is a tendency to trust agent-driven code changes or commands without fully understanding the underlying logic. This can create a disconnect between the human and the AI, hindering the human's learning and potentially leading to a loss of control over the software produced. 
 
+In contrast to agents, when using an LLM through its native web interface, developers tend to assume a more critical approach. The cooperation between the developer and the LLM is more explicit and produces today the best results. 
 
+By bringing LLM conversations into Neovim's native markdown environment, this plugin allows you to have the same critical and iterative dialogue you would have in a web interface, but with the full power of Vim's editing capabilities. 
+
+You can easily add, remove, or modify any part of the conversation. Change system instructions or tweak model parameters on the fly, all with the efficiency of Vim motions!
 ## Install
 
 Use your plugin manager and load the module in your config:

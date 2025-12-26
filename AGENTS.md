@@ -1,18 +1,13 @@
 # Repository Guidelines
 ## Project purpose
-This is a Neovim plugin that provides a simple interface for interacting with LLM providers.
-The goal is to be able to have a full control over the window-context. Be able to fork the chat in any way you want.
-This is not an agent, it's a chat.
-
+This plugin provides a simple, markdown-based chat interface for interacting with LLM providers directly within Neovim. It is not an agent; it is a tool designed to give you, the developer, complete and explicit control over the conversational context.
 ## Core Principles
 All modifications to this repository must adhere to the core tenets of the Unix philosophy. The goal is a system composed of small, simple, and well-defined parts that work together effectively.
 
 ### 1. Do One Thing and Do It Well (Single Responsibility Principle)
 - **Principle**: Each component should focus on a single, well-defined task.
 - **How to Apply This Here**:
-    - **Files**: Avoid monolithic configuration files. 
-    - **Scripts**: Any script in `bin/` must have a single, clear purpose.
-    - **Functions**: Shell or Lua functions should be small and focused.
+    - **Functions**: Lua functions should be small and focused.
     - **Modules**: Lua modules should be small and focused. It is ok to have a larger lua module only if there is an high cohesivity and doesn't make a lot of sense to split in smaller modules.
 
 ### 2. Write Programs That Work Together (Composition)
