@@ -10,11 +10,66 @@ In contrast to agents, when using an LLM through its native web interface, devel
 By bringing LLM conversations into Neovim's native markdown environment, this plugin allows you to have the same critical and iterative dialogue you would have in a web interface, but with the full power of Vim's editing capabilities. 
 
 You can easily add, remove, or modify any part of the conversation. Change system instructions or tweak model parameters on the fly, all with the efficiency of Vim motions!
+
+## Demo
+<!-- Demo source: https://github.com/user-attachments/assets/ca69bccd-6b32-4f56-b23d-719a20b93ddf -->
+https://github.com/user-attachments/assets/ca69bccd-6b32-4f56-b23d-719a20b93ddf
+
 ## Install
 
-Use your plugin manager and load the module in your config:
+### lazy.nvim
 
 ```lua
+{
+  "raffaelepreziosi/MarkdownLLM",
+  dependencies = {
+    {
+      "MeanderingProgrammer/render-markdown.nvim",
+      ft = { "markdown" },
+    },
+  },
+  config = function()
+    require("markdownllm").setup({
+      log_level = vim.log.levels.INFO,
+      default_setup_name = "default",
+      setups = {
+        {
+          name = "default",
+          provider = "openai",
+          model = "gpt-5.2",
+          api_key_name = "OPENAI_API_KEY",
+          opts = {},
+        },
+      },
+      presets = {
+        { name = "Chat", instruction = "" },
+      },
+      actions = {},
+      keymaps = {
+        newChat = "<leader>mn",
+        sendChat = "<leader>ms",
+        selectChatSetup = "<leader>mc",
+        selectDefaultSetup = "<leader>md",
+        editChatSetup = "<leader>me",
+        actions = "<leader>ma",
+        saveChat = "<leader>mw",
+        resumeChat = "<leader>mr",
+      },
+    })
+  end,
+}
+```
+
+`render-markdown.nvim` is optional, but it improves markdown rendering inside Neovim.
+
+### vim.pack (Neovim 0.10+)
+
+```lua
+vim.pack.add({
+  { "raffaelepreziosi/MarkdownLLM" },
+  { "MeanderingProgrammer/render-markdown.nvim" },
+})
+
 require("markdownllm").setup({
   log_level = vim.log.levels.INFO,
   default_setup_name = "default",
@@ -22,7 +77,7 @@ require("markdownllm").setup({
     {
       name = "default",
       provider = "openai",
-      model = "gpt-4o-mini",
+      model = "gpt-5.2",
       api_key_name = "OPENAI_API_KEY",
       opts = {},
     },
@@ -42,6 +97,48 @@ require("markdownllm").setup({
     resumeChat = "<leader>mr",
   },
 })
+```
+
+### packer.nvim
+
+```lua
+require("packer").startup(function(use)
+  use({
+    "raffaelepreziosi/MarkdownLLM",
+    requires = {
+      { "MeanderingProgrammer/render-markdown.nvim" },
+    },
+    config = function()
+      require("markdownllm").setup({
+        log_level = vim.log.levels.INFO,
+        default_setup_name = "default",
+        setups = {
+          {
+            name = "default",
+            provider = "openai",
+            model = "gpt-5.2",
+            api_key_name = "OPENAI_API_KEY",
+            opts = {},
+          },
+        },
+        presets = {
+          { name = "Chat", instruction = "" },
+        },
+        actions = {},
+        keymaps = {
+          newChat = "<leader>mn",
+          sendChat = "<leader>ms",
+          selectChatSetup = "<leader>mc",
+          selectDefaultSetup = "<leader>md",
+          editChatSetup = "<leader>me",
+          actions = "<leader>ma",
+          saveChat = "<leader>mw",
+          resumeChat = "<leader>mr",
+        },
+      })
+    end,
+  })
+end)
 ```
 
 ## Commands
