@@ -17,15 +17,17 @@ https://github.com/user-attachments/assets/ca69bccd-6b32-4f56-b23d-719a20b93ddf
 
 ## Install
 
+MarkdownLLM is lightweight and has no required dependencies. The only optional suggestion is a markdown renderer for nicer in-editor output.
+
 ### lazy.nvim
 
 ```lua
 {
   "raffaelepreziosi/MarkdownLLM",
+  -- optional markdown renderer
   dependencies = {
     {
       "MeanderingProgrammer/render-markdown.nvim",
-      ft = { "markdown" },
     },
   },
   opts = {
@@ -57,8 +59,6 @@ https://github.com/user-attachments/assets/ca69bccd-6b32-4f56-b23d-719a20b93ddf
   },
 }
 ```
-
-`render-markdown.nvim` is optional, but it improves markdown rendering inside Neovim.
 
 ### vim.pack (Neovim 0.10+)
 
