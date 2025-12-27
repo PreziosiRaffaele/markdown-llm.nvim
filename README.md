@@ -28,35 +28,33 @@ https://github.com/user-attachments/assets/ca69bccd-6b32-4f56-b23d-719a20b93ddf
       ft = { "markdown" },
     },
   },
-  config = function()
-    require("markdownllm").setup({
-      log_level = vim.log.levels.INFO,
-      default_setup_name = "default",
-      setups = {
-        {
-          name = "default",
-          provider = "openai",
-          model = "gpt-5.2",
-          api_key_name = "OPENAI_API_KEY",
-          opts = {},
-        },
+  opts = {
+    log_level = vim.log.levels.INFO,
+    default_setup_name = "default",
+    setups = {
+      {
+        name = "default",
+        provider = "openai",
+        model = "gpt-5.2",
+        api_key_name = "OPENAI_API_KEY",
+        opts = {},
       },
-      presets = {
-        { name = "Chat", instruction = "" },
-      },
-      actions = {},
-      keymaps = {
-        newChat = "<leader>mn",
-        sendChat = "<leader>ms",
-        selectChatSetup = "<leader>mc",
-        selectDefaultSetup = "<leader>md",
-        editChatSetup = "<leader>me",
-        actions = "<leader>ma",
-        saveChat = "<leader>mw",
-        resumeChat = "<leader>mr",
-      },
-    })
-  end,
+    },
+    presets = {
+      { name = "Chat", instruction = "" },
+    },
+    actions = {},
+    keymaps = {
+      newChat = "<leader>mn",
+      sendChat = "<leader>ms",
+      selectChatSetup = "<leader>mc",
+      selectDefaultSetup = "<leader>md",
+      editChatSetup = "<leader>me",
+      actions = "<leader>ma",
+      saveChat = "<leader>mw",
+      resumeChat = "<leader>mr",
+    },
+  },
 }
 ```
 
@@ -185,6 +183,97 @@ Help docs are available in `doc/markdownllm.txt` after running `:helptags`.
   - `actions`
   - `saveChat`
   - `resumeChat`
+
+## Configuration Examples
+
+### Multiple setups (providers + model options)
+
+```lua
+setups = {
+  {
+    name = "OpenAI-5.2",
+    provider = "openai",
+    model = "gpt-5.2",
+    api_key_name = "OPENAI_API_KEY",
+  },
+  {
+    name = "Gemini-2.5-flash",
+    provider = "gemini",
+    model = "gemini-2.5-flash",
+    api_key_name = "GEMINI_API_KEY",
+  },
+  {
+    name = "Grok Code Fast",
+    provider = "grok",
+    model = "grok-code-fast-1",
+    api_key_name = "GROK_API_KEY",
+  },
+  {
+    name = "Gemini-2.5-pro",
+    provider = "gemini",
+    model = "gemini-2.5-pro",
+    api_key_name = "GEMINI_API_KEY",
+    opts = {
+      tools = {
+        {
+          -- Enable Gemini web search tool by default
+          google_search = vim.empty_dict(),
+        },
+      },
+    },
+  },
+}
+```
+
+### Presets (system instructions + default setup)
+
+```lua
+presets = {
+  {
+    name = "Chat",
+    instruction = "",
+  },
+  {
+    name = "Software Development",
+    instruction = "You are an expert software developer and architect. Favor the Unix philosophy. Ask clarifying questions when requirements are ambiguous. Propose tradeoffs before making architectural choices.",
+  },
+  {
+    name = "Geopolitics",
+    instruction = "You are an expert geopolitics analyst and educator. Explain geopolitics topics clearly and neutrally for an intelligent, non-specialist audience.",
+  },
+  {
+    name = "Traduttore Italiano",
+    setup = "Gemini-2.5-flash", -- Setup Name Override
+    instruction = "You are an Italian native speaker and translator. Write natural Italian and preserve the original meaning.",
+  },
+}
+```
+
+### Actions (visual selection prompts)
+
+```lua
+actions = {
+  {
+    name = "Summarize",
+    preset = "Chat",
+    type = "text",
+    pre_text = "Summarize the following text:\n\n",
+  },
+  {
+    name = "Explain Code",
+    preset = "Software Development",
+    type = "code",
+    language = "lua",
+    pre_text = "Explain what this code does:\n\n",
+  },
+  {
+    name = "Traduci",
+    preset = "Traduttore Italiano",
+    type = "text",
+    pre_text = "Traduci questo testo in italiano:\n\n",
+  },
+}
+```
 
 ## Providers
 
