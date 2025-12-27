@@ -21,7 +21,7 @@ https://github.com/user-attachments/assets/ca69bccd-6b32-4f56-b23d-719a20b93ddf
 
 ```lua
 {
-  "raffaelepreziosi/MarkdownLLM",
+  "PreziosiRaffaele/markdown-llm.nvim",
   dependencies = {
     {
       "MeanderingProgrammer/render-markdown.nvim",
@@ -64,7 +64,7 @@ https://github.com/user-attachments/assets/ca69bccd-6b32-4f56-b23d-719a20b93ddf
 
 ```lua
 vim.pack.add({
-  { "raffaelepreziosi/MarkdownLLM" },
+  { "PreziosiRaffaele/markdown-llm.nvim" },
   { "MeanderingProgrammer/render-markdown.nvim" },
 })
 
@@ -102,7 +102,7 @@ require("markdownllm").setup({
 ```lua
 require("packer").startup(function(use)
   use({
-    "raffaelepreziosi/MarkdownLLM",
+    "PreziosiRaffaele/markdown-llm.nvim",
     requires = {
       { "MeanderingProgrammer/render-markdown.nvim" },
     },
