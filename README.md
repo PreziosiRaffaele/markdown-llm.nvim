@@ -60,14 +60,11 @@ MarkdownLLM is lightweight and has no required dependencies. The only optional s
 }
 ```
 
-### vim.pack (Neovim 0.10+)
+### Other plugin managers
+
+Add `PreziosiRaffaele/markdown-llm.nvim` (and optionally `MeanderingProgrammer/render-markdown.nvim`) as you normally would, then call the setup function in your config:
 
 ```lua
-vim.pack.add({
-  { "PreziosiRaffaele/markdown-llm.nvim" },
-  { "MeanderingProgrammer/render-markdown.nvim" },
-})
-
 require("markdownllm").setup({
   log_level = vim.log.levels.INFO,
   default_setup_name = "default",
@@ -95,48 +92,6 @@ require("markdownllm").setup({
     resumeChat = "<leader>mr",
   },
 })
-```
-
-### packer.nvim
-
-```lua
-require("packer").startup(function(use)
-  use({
-    "PreziosiRaffaele/markdown-llm.nvim",
-    requires = {
-      { "MeanderingProgrammer/render-markdown.nvim" },
-    },
-    config = function()
-      require("markdownllm").setup({
-        log_level = vim.log.levels.INFO,
-        default_setup_name = "default",
-        setups = {
-          {
-            name = "default",
-            provider = "openai",
-            model = "gpt-5.2",
-            api_key_name = "OPENAI_API_KEY",
-            opts = {},
-          },
-        },
-        presets = {
-          { name = "Chat", instruction = "" },
-        },
-        actions = {},
-        keymaps = {
-          newChat = "<leader>mn",
-          sendChat = "<leader>ms",
-          selectChatSetup = "<leader>mc",
-          selectDefaultSetup = "<leader>md",
-          editChatSetup = "<leader>me",
-          actions = "<leader>ma",
-          saveChat = "<leader>mw",
-          resumeChat = "<leader>mr",
-        },
-      })
-    end,
-  })
-end)
 ```
 
 ## Commands
