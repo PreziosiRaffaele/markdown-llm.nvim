@@ -5,9 +5,9 @@ Recently, there has been a proliferation of LLM interaction tools designed as ag
 
 There is a tendency to trust agent-driven code changes or commands without fully understanding the underlying logic. This can create a disconnect between the human and the AI, hindering the human's learning and potentially leading to a loss of control over the software produced. 
 
-In contrast to agents, when using an LLM through its native web interface, developers tend to assume a more critical approach. The cooperation between the developer and the LLM is more explicit and produces today the best results. 
+Unlike agent-based systems, interacting with an LLM through its native web interface keeps the human in a clearly leading role, with collaboration being explicit and the developer maintaining a more critical stance.
 
-By bringing LLM conversations into Neovim's native markdown environment, this plugin allows you to have the same critical and iterative dialogue you would have in a web interface, but with the full power of Vim's editing capabilities. 
+By bringing LLM chat into Neovim's native markdown environment, this plugin allows you to have the same critical and iterative dialogue you would have in a web interface, but with the full power of Vim's editing capabilities. 
 
 You can easily add, remove, or modify any part of the conversation. Change system instructions or tweak model parameters on the fly, all with the efficiency of Vim motions!
 
