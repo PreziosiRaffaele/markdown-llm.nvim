@@ -17,8 +17,15 @@ local providers = {
 --- @raise If `provider_name` is unknown.
 function M.get(provider_name)
     local implementation = providers[provider_name]
+
+    -- check if the provider is supported
     if not implementation then
         error('Provider ' .. tostring(provider_name) .. ' is not supported.')
+    end
+
+    -- check if implementation has send function
+    if type(implementation.send) ~= 'function' then
+        error('Provider ' .. provider_name .. ' does not have a send function.')
     end
 
     return implementation
