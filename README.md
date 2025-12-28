@@ -23,7 +23,7 @@ MarkdownLLM is lightweight and has no required dependencies. The only optional s
 
 ```lua
 {
-  "raffaelepreziosi/MarkdownLLM",
+  "PreziosiRaffaele/markdown-llm.nvim",
   -- optional markdown renderer
   dependencies = {
     {
@@ -64,7 +64,7 @@ MarkdownLLM is lightweight and has no required dependencies. The only optional s
 
 ```lua
 vim.pack.add({
-  { "raffaelepreziosi/MarkdownLLM" },
+  { "PreziosiRaffaele/markdown-llm.nvim" },
   { "MeanderingProgrammer/render-markdown.nvim" },
 })
 
@@ -102,7 +102,7 @@ require("markdownllm").setup({
 ```lua
 require("packer").startup(function(use)
   use({
-    "raffaelepreziosi/MarkdownLLM",
+    "PreziosiRaffaele/markdown-llm.nvim",
     requires = {
       { "MeanderingProgrammer/render-markdown.nvim" },
     },
