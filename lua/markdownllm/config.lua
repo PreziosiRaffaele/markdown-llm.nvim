@@ -5,6 +5,8 @@ local M = {}
 
 local default_config = {
     log_level = vim.log.levels.INFO,
+    log_to_file = false,
+    log_file_path = vim.fn.stdpath('cache') .. '/markdownllm.log',
     setups = {},
     presets = {},
     actions = {},

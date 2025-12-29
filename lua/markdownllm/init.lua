@@ -15,7 +15,11 @@ function M.setup(opts)
     config_mod.update(opts)
     local config = config_mod.config
 
-    logger.configure({ level = config.log_level })
+    logger.configure({
+        level = config.log_level,
+        log_to_file = config.log_to_file,
+        log_file_path = config.log_file_path,
+    })
 
     -- Validate default setup
 

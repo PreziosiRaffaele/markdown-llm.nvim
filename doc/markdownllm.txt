@@ -76,6 +76,12 @@ The setup table supports:
 log_level
     Logger level (default: vim.log.levels.INFO).
 
+log_to_file
+    Enable logging to file (default: false).
+
+log_file_path
+    Log file path (default: stdpath("cache") .. "/markdownllm.log").
+
 default_setup_name
     Name of the default setup used for new chats.
 

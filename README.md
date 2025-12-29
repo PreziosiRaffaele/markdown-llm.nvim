@@ -110,6 +110,8 @@ Help docs are available in `doc/markdownllm.txt` after running `:helptags`.
 ## Configuration
 
 - `log_level` logger level (default: `vim.log.levels.INFO`).
+- `log_to_file` enable logging to file (default: `false`).
+- `log_file_path` log file path (default: `stdpath("cache")/markdownllm.log`).
 - `default_setup_name` name of the default setup used for new chats.
 - `setups` list of provider/model setups:
   - `name` unique label used in selectors.
@@ -137,7 +139,7 @@ Help docs are available in `doc/markdownllm.txt` after running `:helptags`.
   - `editChatSetup`
   - `actions`
   - `saveChat`
-  - `resumeChat`
+- `resumeChat`
 
 ## Configuration Examples
 
@@ -237,6 +239,25 @@ Built-in providers live under `lua/markdownllm/providers` and are resolved by na
 - `openai`
 - `gemini`
 - `grok`
+
+## Troubleshooting
+
+### Logs
+
+To enable file logging, set `log_to_file = true` in your setup and optionally
+override `log_file_path`. The default log path is
+`stdpath("cache")/markdownllm.log`. To debug API calls, set
+`log_level = vim.log.levels.DEBUG` to log request and raw response bodies.
+
+Example:
+
+```lua
+require("markdownllm").setup({
+  log_level = vim.log.levels.DEBUG,
+  log_to_file = true,
+  log_file_path = vim.fn.stdpath("cache") .. "/markdownllm.log",
+})
+```
 
 ## License
 
