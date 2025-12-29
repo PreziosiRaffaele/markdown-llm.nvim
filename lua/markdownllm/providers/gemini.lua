@@ -86,9 +86,8 @@ function M.send(setup, system_text, messages, on_success, on_error)
 
     local payload = build_payload(system_text, messages, setup)
     local url = string.format(
-        'https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s',
-        setup.model,
-        api_key
+        'https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent',
+        setup.model
     )
 
     local encoded = vim.fn.json_encode(payload)
@@ -100,6 +99,8 @@ function M.send(setup, system_text, messages, on_success, on_error)
         '-X',
         'POST',
         url,
+        '-H',
+        'x-goog-api-key: ' .. api_key,
         '-H',
         'Content-Type: application/json',
         '-d',
