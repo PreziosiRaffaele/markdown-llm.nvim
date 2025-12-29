@@ -129,12 +129,12 @@ Keymap fields:
 ==============================================================================
 Providers                                                  *markdownllm-providers*
 
-Built-in providers live under lua/markdownllm/providers and are resolved by
-name:
+The following providers are currently supported:
+  Open AI
+  Google
+  xAI
 
-    openai
-    gemini
-    grok
+Other providers can be added per request. Raise an issue or PR to add a new provider.
 
 ==============================================================================
 Notes                                                        *markdownllm-notes*
