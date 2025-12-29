@@ -22,6 +22,23 @@ local function trim(text)
     return (text:gsub('^%s+', ''):gsub('%s+$', ''))
 end
 
+---Execute a function safely, logging errors with stack traces.
+---@param fn fun(): any
+---@return boolean ok, any result_or_error
+local function safe_call(fn)
+    -- xpcall catches the error before the stack unwinds, allowing debug.traceback
+    return xpcall(fn, function(err)
+        local msg = tostring(err)
+        local trace = debug.traceback(msg, 2)
+        -- Log the full traceback so you can fix bugs easily
+        logger.error(trace)
+        return msg
+    end)
+end
+
+---Build a new chat buffer template.
+---@param instruction_text string|nil
+---@return string[]
 local function chat_template(instruction_text)
     local template = {
         '# System',
@@ -40,6 +57,10 @@ local function chat_template(instruction_text)
     return template
 end
 
+---Parse a chat buffer into system text and message list.
+---@param bufnr integer
+---@return string
+---@return table[]
 local function parse_buffer(bufnr)
     local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
     local system_lines = {}
@@ -90,6 +111,9 @@ local function parse_buffer(bufnr)
     return system_text, messages
 end
 
+---Check if a buffer name already exists.
+---@param name string
+---@return boolean
 local function buffer_name_exists(name)
     for _, buf in ipairs(vim.api.nvim_list_bufs()) do
         if vim.api.nvim_buf_is_loaded(buf) or vim.fn.buflisted(buf) == 1 then
@@ -103,6 +127,8 @@ local function buffer_name_exists(name)
     return false
 end
 
+---Generate the next available chat buffer name.
+---@return string
 local function next_chat_name()
     local base = 'markdownLLM.md'
     if not buffer_name_exists(base) then
@@ -119,6 +145,10 @@ local function next_chat_name()
     end
 end
 
+---Ensure the chat save directory exists.
+---@param path string|nil
+---@return string|nil
+---@return string|nil
 local function ensure_chat_save_dir(path)
     if not path or path == '' then
         return nil, 'Chat save directory is not configured.'
@@ -130,6 +160,9 @@ local function ensure_chat_save_dir(path)
     return path, nil
 end
 
+---Normalize a chat filename to a safe markdown filename.
+---@param name string|nil
+---@return string|nil
 local function sanitize_chat_filename(name)
     local trimmed = trim(name or '')
     if trimmed == '' then
@@ -159,15 +192,21 @@ local function list_saved_chats(path)
     return files, nil
 end
 
+---Find a setup by name.
+---@param name string
+---@return table
+---@throws string
 local function find_setup(name)
     for _, setup in ipairs(config.setups or {}) do
         if setup.name == name then
             return setup
         end
     end
-    return nil, 'Setup "' .. name .. '" not found in the configured setups.'
+    error('Setup "' .. name .. '" not found in the configured setups.')
 end
 
+---Return the list of configured setup names.
+---@return string[]
 local function setup_names()
     local names = {}
     for _, setup in ipairs(config.setups or {}) do
@@ -176,14 +215,14 @@ local function setup_names()
     return names
 end
 
+---Get the configured default setup.
+---@return table
+---@throws string
 local function get_default_setup()
     if not config.default_setup_name then
-        return nil, 'No default setup configured.'
+        error('No default setup configured.')
     end
-
-    local setup, err = find_setup(config.default_setup_name)
-
-    return setup, err
+    return find_setup(config.default_setup_name)
 end
 
 ---@param bufnr integer
@@ -196,13 +235,23 @@ local function apply_setup_to_buffer(bufnr, setup)
     vim.b[bufnr].markdownllm_setup = buffer_setup
 end
 
----@param preset table
----@return table|nil
+---Resolve the setup for a preset or fall back to the default.
+---@param preset table|nil
+---@return table
+---@throws string
 local function resolve_preset_setup_name(preset)
-    local setup_name = preset and preset.setup and preset.setup ~= '' and preset.setup or config.default_setup_name
+    local setup_name;
+    if preset and preset.setup and preset.setup ~= '' then
+        setup_name = preset.setup
+    else
+        setup_name = config.default_setup_name
+    end
     return find_setup(setup_name)
 end
 
+---Prompt the user to select a preset.
+---@param on_select fun(preset: table|nil): nil
+---@return nil
 local function select_preset(on_select)
     local presets = config.presets or {}
     if not presets or #presets == 0 then
@@ -213,18 +262,26 @@ local function select_preset(on_select)
     vim.ui.select(presets, {
         prompt = 'Select prompt preset',
         format_item = function(item)
-            local label = item.name or '(unnamed preset)'
-            local setup = resolve_preset_setup_name(item)
-            if setup then
-                label = string.format('%s  [setup: %s]', label, setup.name)
+            -- Attempt to resolve the setup safely
+            local ok, setup = pcall(resolve_preset_setup_name, item)
+            if ok then
+                return string.format('%s  [setup: %s]', item.name, setup.name)
+            else
+                -- Graceful degradation: Show the user something is wrong visually
+                local target = item.setup or config.default_setup_name or 'unknown'
+                return string.format('%s  [❌ INVALID SETUP: %s]', item.name, target)
             end
-            return label
         end,
     }, function(choice)
-        on_select(choice)
+        safe_call(function()
+            on_select(choice)
+        end)
     end)
 end
 
+---Find a preset by name.
+---@param name string|nil
+---@return table|nil
 local function find_preset(name)
     if not name or name == '' then
         return nil
@@ -237,6 +294,8 @@ local function find_preset(name)
     return nil
 end
 
+---Read the current visual selection as text.
+---@return string
 local function get_visual_selection_text()
     local start_pos = vim.api.nvim_buf_get_mark(0, '<')
     local end_pos = vim.api.nvim_buf_get_mark(0, '>')
@@ -261,6 +320,10 @@ local function get_visual_selection_text()
     return table.concat(text, '\n')
 end
 
+---Build the user message text for an action from a selection.
+---@param action table
+---@param selection_text string
+---@return string
 local function build_action_user_text(action, selection_text)
     local lines = {}
     local pre_text = trim(action.pre_text or '')
@@ -282,6 +345,10 @@ local function build_action_user_text(action, selection_text)
     return trim(table.concat(lines, '\n'))
 end
 
+---Replace the last user block in a chat buffer.
+---@param bufnr integer
+---@param user_text string|nil
+---@return boolean
 local function replace_last_user_block(bufnr, user_text)
     local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
     local user_idx = nil
@@ -302,6 +369,9 @@ local function replace_last_user_block(bufnr, user_text)
     return true
 end
 
+---Prompt the user to select an action.
+---@param on_select fun(action: table|nil): nil
+---@return nil
 local function select_action(on_select)
     local actions = config.actions or {}
     if not actions or #actions == 0 then
@@ -329,6 +399,10 @@ local function select_action(on_select)
     end)
 end
 
+---Append a model response to the chat buffer.
+---@param bufnr integer
+---@param response_text string
+---@return nil
 local function append_response(bufnr, response_text)
     local winid = vim.fn.bufwinid(bufnr)
     local cursor = nil
@@ -356,6 +430,9 @@ local function append_response(bufnr, response_text)
     end
 end
 
+---Send the current chat buffer to the configured provider.
+---@param bufnr integer
+---@return nil
 local function send_request(bufnr)
     local setup = vim.b[bufnr].markdownllm_setup
 
@@ -411,6 +488,9 @@ local function send_request(bufnr)
     end
 end
 
+---Open a new chat buffer for a preset.
+---@param preset table
+---@return integer
 local function open_chat(preset)
     vim.cmd('enew')
     local bufnr = vim.api.nvim_get_current_buf()
@@ -420,12 +500,7 @@ local function open_chat(preset)
     vim.bo[bufnr].bufhidden = 'hide'
     vim.bo[bufnr].swapfile = false
 
-    local setup_name, err = resolve_preset_setup_name(preset)
-
-    if not setup_name then
-        logger.error(err)
-        return
-    end
+    local setup_name = resolve_preset_setup_name(preset)
 
     apply_setup_to_buffer(bufnr, setup_name)
 
@@ -442,11 +517,15 @@ local function open_chat(preset)
     return bufnr
 end
 
+---Send the current buffer as a chat request.
+---@return nil
 local function send_current_buffer()
     local bufnr = vim.api.nvim_get_current_buf()
     send_request(bufnr)
 end
 
+---Save the current chat buffer to disk.
+---@return nil
 local function save_current_buffer()
     local bufnr = vim.api.nvim_get_current_buf()
     local save_dir, err = ensure_chat_save_dir(config.chat_save_dir)
@@ -508,24 +587,24 @@ local function resume_saved_chat()
             return item.label
         end,
     }, function(choice)
-        if not choice then
-            return
-        end
+        safe_call(function()
+            if not choice then
+                return
+            end
 
-        local setup, setup_err = get_default_setup()
-        if not setup then
-            logger.error(setup_err)
-            return
-        end
+            local setup = get_default_setup()
 
-        vim.cmd('edit ' .. vim.fn.fnameescape(choice.path))
-        local bufnr = vim.api.nvim_get_current_buf()
-        vim.bo[bufnr].filetype = 'markdown'
-        apply_setup_to_buffer(bufnr, setup)
-        logger.info('Resumed MarkdownLLM chat: ' .. choice.label)
+            vim.cmd('edit ' .. vim.fn.fnameescape(choice.path))
+            local bufnr = vim.api.nvim_get_current_buf()
+            vim.bo[bufnr].filetype = 'markdown'
+            apply_setup_to_buffer(bufnr, setup)
+            logger.info('Resumed MarkdownLLM chat: ' .. choice.label)
+        end)
     end)
 end
 
+---Create a chat from the visual selection and send it.
+---@return nil
 local function action_from_visual()
     local selection_text = get_visual_selection_text()
     logger.trace('Visual selection text: ' .. tostring(selection_text))
@@ -559,6 +638,9 @@ local function action_from_visual()
 end
 
 
+---Prompt the user to select a setup.
+---@param on_select fun(setup: table): nil
+---@return nil
 local function select_setup(on_select)
     local names = setup_names()
     if #names == 0 then
@@ -567,14 +649,12 @@ local function select_setup(on_select)
     end
 
     vim.ui.select(names, { prompt = 'Select MarkdownLLM setup' }, function(choice)
-        if choice then
-            local setup, err = find_setup(choice)
-            if not setup then
-                logger.error(err)
-                return
+        safe_call(function()
+            if choice then
+                local setup = find_setup(choice)
+                on_select(setup)
             end
-            on_select(setup)
-        end
+        end)
     end)
 end
 
@@ -593,6 +673,8 @@ local function select_buffer_setup(bufnr)
     end)
 end
 
+---Select and apply the default setup name.
+---@return nil
 local function select_default_setup()
     select_setup(function(setup)
         config.default_setup_name = setup.name
@@ -705,9 +787,10 @@ function M.setup(opts)
 
     -- Ensure the default setup is configured
 
-    local default_setup, err = get_default_setup()
-    if not default_setup then
-        logger.error(err)
+    local ok, default_setup = pcall(get_default_setup)
+
+    if not ok then
+        logger.error(default_setup)
         return
     end
 
@@ -718,42 +801,58 @@ function M.setup(opts)
     -- Commands
 
     vim.api.nvim_create_user_command('MarkLLMNewChat', function()
-        select_preset(function(preset)
-            if not preset then
-                return
-            end
-            open_chat(preset)
+        safe_call(function()
+            select_preset(function(preset)
+                if not preset then
+                    return
+                end
+                open_chat(preset)
+            end)
         end)
     end, { desc = 'New chat' })
 
     vim.api.nvim_create_user_command('MarkLLMSendChat', function()
-        send_current_buffer()
+        safe_call(function()
+            send_current_buffer()
+        end)
     end, { desc = 'Send chat' })
 
     vim.api.nvim_create_user_command('MarkLLMRunAction', function()
-        action_from_visual()
+        safe_call(function()
+            action_from_visual()
+        end)
     end, { range = true, desc = 'Run action' })
 
     vim.api.nvim_create_user_command('MarkLLMSelectBufferSetup', function()
-        local buffer = vim.api.nvim_get_current_buf()
-        select_buffer_setup(buffer)
+        safe_call(function()
+            local buffer = vim.api.nvim_get_current_buf()
+            select_buffer_setup(buffer)
+        end)
     end, { desc = 'Select chat setup' })
 
     vim.api.nvim_create_user_command('MarkLLMSelectDefaultSetup', function()
-        select_default_setup()
+        safe_call(function()
+            select_default_setup()
+        end)
     end, { desc = 'Select default setup' })
 
     vim.api.nvim_create_user_command('MarkLLMEditChatSetup', function()
-        local buffer = vim.api.nvim_get_current_buf()
-        open_setup_editor(buffer)
+        safe_call(function()
+            local buffer = vim.api.nvim_get_current_buf()
+            open_setup_editor(buffer)
+        end)
     end, { desc = 'Edit chat setup' })
 
     vim.api.nvim_create_user_command('MarkLLMSaveChat', function()
-        save_current_buffer()
+        safe_call(function()
+            save_current_buffer()
+        end)
     end, { desc = 'Save chat' })
 
     vim.api.nvim_create_user_command('MarkLLMResumeChat', function()
-        resume_saved_chat()
+        safe_call(function()
+            resume_saved_chat()
+        end)
     end, { desc = 'Resume chat' })
 
     -- Keymaps
