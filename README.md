@@ -12,8 +12,8 @@ By bringing LLM chat into Neovim's native markdown environment, this plugin allo
 You can easily add, remove, or modify any part of the conversation. Change system instructions or tweak model parameters on the fly, all with the efficiency of Vim motions!
 
 ## Demo
-<!-- Demo source: https://github.com/user-attachments/assets/ca69bccd-6b32-4f56-b23d-719a20b93ddf -->
-https://github.com/user-attachments/assets/ca69bccd-6b32-4f56-b23d-719a20b93ddf
+<!-- Demo source: https://github.com/user-attachments/assets/5d08506d-e3eb-4a7f-a7aa-117bee2a055f -->
+https://github.com/user-attachments/assets/5d08506d-e3eb-4a7f-a7aa-117bee2a055f
 
 ## Install
 
