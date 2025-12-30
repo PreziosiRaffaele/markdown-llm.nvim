@@ -4,6 +4,7 @@
 local M = {}
 
 local util = require('markdownllm.util')
+local ns_loading = vim.api.nvim_create_namespace('markdownllm_loading')
 
 ---Build a new chat buffer template.
 ---@param instruction_text string|nil
@@ -175,6 +176,67 @@ function M.append_response(bufnr, response_text)
     if winid ~= -1 and cursor then
         vim.api.nvim_win_set_cursor(winid, cursor)
     end
+end
+
+---Append a model header ready for streaming.
+---@param bufnr integer
+---@return integer
+function M.append_loading_model_block(bufnr)
+    local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+    local new_block = {}
+    local line_count = #lines
+
+    if line_count > 0 and lines[line_count]:match('%S') then
+        table.insert(new_block, '')
+    end
+
+    table.insert(new_block, '## Model')
+    table.insert(new_block, '')
+
+    vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, new_block)
+
+    return line_count + (#new_block - 1)
+end
+
+---Set virtual loading text on a given line.
+---@param bufnr integer
+---@param line_idx integer
+---@param text string
+---@return integer
+function M.set_loading_virtual_text(bufnr, line_idx, text)
+    return vim.api.nvim_buf_set_extmark(bufnr, ns_loading, line_idx, 0, {
+        virt_text = { { text, 'Comment' } },
+        virt_text_pos = 'eol',
+        hl_mode = 'combine',
+    })
+end
+
+---Clear a loading virtual text extmark.
+---@param bufnr integer
+---@param mark_id integer|nil
+---@return nil
+function M.clear_loading_virtual_text(bufnr, mark_id)
+    if mark_id and vim.api.nvim_buf_is_valid(bufnr) then
+        vim.api.nvim_buf_del_extmark(bufnr, ns_loading, mark_id)
+    end
+end
+
+---Replace a line with the provided text, split on newlines.
+---@param bufnr integer
+---@param line_idx integer
+---@param text string
+---@return nil
+function M.replace_line_with_text(bufnr, line_idx, text)
+    local replacement = vim.split(text or '', '\n', { plain = true })
+    vim.api.nvim_buf_set_lines(bufnr, line_idx, line_idx + 1, false, replacement)
+end
+
+---Remove a line from the buffer.
+---@param bufnr integer
+---@param line_idx integer
+---@return nil
+function M.remove_line(bufnr, line_idx)
+    vim.api.nvim_buf_set_lines(bufnr, line_idx, line_idx + 1, false, {})
 end
 
 ---Toggle the sending flag for a chat buffer.

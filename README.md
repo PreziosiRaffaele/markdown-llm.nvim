@@ -17,7 +17,9 @@ https://github.com/user-attachments/assets/ca69bccd-6b32-4f56-b23d-719a20b93ddf
 
 ## Install
 
-MarkdownLLM is lightweight and has no required dependencies. The only optional suggestion is a markdown renderer for nicer in-editor output.
+MarkdownLLM is lightweight completely written in Lua. 
+It has no dependencies on other plugins.
+The only optional suggestion is to use [render-markdown.nvim](https://github.com/MeanderingProgrammer/render-markdown.nvim) to render markdown in the chat buffer.
 
 ### lazy.nvim
 

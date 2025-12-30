@@ -11,6 +11,43 @@ local provider_factory = require('markdownllm.provider_factory')
 local ui = require('markdownllm.ui')
 local util = require('markdownllm.util')
 
+---@class markdownllm.StreamState
+---@field started boolean
+---@field finished boolean
+
+---Append text to the end of the buffer.
+---@param bufnr integer
+---@param text string
+---@return nil
+local function append_text_at_end(bufnr, text)
+    local line_count = vim.api.nvim_buf_line_count(bufnr)
+    if line_count == 0 then
+        vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { text })
+        return
+    end
+
+    local last_line = vim.api.nvim_buf_get_lines(bufnr, line_count - 1, line_count, false)[1] or ''
+    local parts = vim.split(text, '\n', { plain = true })
+
+    if #parts == 1 then
+        vim.api.nvim_buf_set_lines(bufnr, line_count - 1, line_count, false, { last_line .. parts[1] })
+    else
+        parts[1] = last_line .. parts[1]
+        vim.api.nvim_buf_set_lines(bufnr, line_count - 1, line_count, false, parts)
+    end
+end
+
+---Finalize the streamed response by clearing the loading placeholder and adding a new user block.
+---@param bufnr integer
+---@return nil
+local function finalize_stream_response(bufnr)
+    if not vim.api.nvim_buf_is_valid(bufnr) then
+        return
+    end
+
+    vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, { '', '## User', '' })
+end
+
 ---Build the user message text for an action from a selection.
 ---@param action table
 ---@param selection_text string
@@ -34,6 +71,16 @@ function M.build_action_user_text(action, selection_text)
     end
 
     return util.trim(table.concat(lines, '\n'))
+end
+
+---Cleanup the request state.
+---@param bufnr integer
+---@param loading_mark integer|nil
+---@return nil
+local function cleanup_request_state(bufnr, loading_mark)
+    finalize_stream_response(bufnr)
+    buffer.clear_loading_virtual_text(bufnr, loading_mark)
+    buffer.toggle_sending_flag(bufnr)
 end
 
 ---Send the current chat buffer to the configured provider.
@@ -66,25 +113,37 @@ function M.send_request(bufnr)
     end
 
     buffer.toggle_sending_flag(bufnr)
+    local loading_line = buffer.append_loading_model_block(bufnr)
+    local loading_mark = buffer.set_loading_virtual_text(bufnr, loading_line, 'Loading...')
 
     logger.info('Sending request to Provider: ' .. setup.provider .. ', Model:' .. setup.model)
 
     local send_ok, send_err = pcall(function()
+        local started = false
+
         implementation.send(setup, system_text, messages, function(response_text)
-            if vim.api.nvim_buf_is_valid(bufnr) then
-                buffer.append_response(bufnr, response_text)
-                logger.debug('model text (' .. setup.provider .. ' ' .. setup.model .. '): ' .. response_text)
-                logger.info('Response appended to markdownLLM chat.')
+            if not vim.api.nvim_buf_is_valid(bufnr) then
+                return
             end
-            buffer.toggle_sending_flag(bufnr)
+
+            if response_text and response_text ~= '' then
+                if not started then
+                    buffer.clear_loading_virtual_text(bufnr, loading_mark)
+                    started = true
+                end
+                append_text_at_end(bufnr, response_text)
+            end
+        end, function()
+            cleanup_request_state(bufnr, loading_mark)
+            logger.info('Response appended to markdownLLM chat.')
         end, function(msg)
+            cleanup_request_state(bufnr, loading_mark)
             logger.error(msg)
-            buffer.toggle_sending_flag(bufnr)
         end)
     end)
     if not send_ok then
+        cleanup_request_state(bufnr, loading_mark)
         logger.error('MarkdownLLM send failed: ' .. tostring(send_err))
-        buffer.toggle_sending_flag(bufnr)
     end
 end
 
@@ -218,7 +277,8 @@ function M.action_from_visual()
             return
         end
 
-        local preset = config_mod.find_preset(action.preset) or (config_mod.config.presets and config_mod.config.presets[1])
+        local preset = config_mod.find_preset(action.preset) or
+            (config_mod.config.presets and config_mod.config.presets[1])
             or nil
         if not preset then
             logger.error('No presets configured. Add at least one preset first.')
