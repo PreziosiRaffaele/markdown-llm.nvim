@@ -37,34 +37,14 @@ local function append_text_at_end(bufnr, text)
     end
 end
 
----Ensure the buffer is ready to receive a streamed model response.
+---Finalize the streamed response by clearing the loading placeholder and adding a new user block.
 ---@param bufnr integer
 ---@return nil
-local function prepare_stream_response(bufnr)
-    local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
-    local new_block = {}
-
-    if #lines > 0 and lines[#lines]:match('%S') then
-        table.insert(new_block, '')
-    end
-
-    table.insert(new_block, '## Model')
-    table.insert(new_block, '')
-
-    vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, new_block)
-end
-
----Finalize the streamed response by ensuring a model block and adding a new user block.
----@param bufnr integer
----@param started boolean
----@return nil
-local function finalize_stream_response(bufnr, started)
+local function finalize_stream_response(bufnr)
     if not vim.api.nvim_buf_is_valid(bufnr) then
         return
     end
-    if not started then
-        prepare_stream_response(bufnr)
-    end
+
     vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, { '', '## User', '' })
 end
 
@@ -91,6 +71,16 @@ function M.build_action_user_text(action, selection_text)
     end
 
     return util.trim(table.concat(lines, '\n'))
+end
+
+---Cleanup the request state.
+---@param bufnr integer
+---@param loading_mark integer|nil
+---@return nil
+local function cleanup_request_state(bufnr, loading_mark)
+    finalize_stream_response(bufnr)
+    buffer.clear_loading_virtual_text(bufnr, loading_mark)
+    buffer.toggle_sending_flag(bufnr)
 end
 
 ---Send the current chat buffer to the configured provider.
@@ -123,6 +113,8 @@ function M.send_request(bufnr)
     end
 
     buffer.toggle_sending_flag(bufnr)
+    local loading_line = buffer.append_loading_model_block(bufnr)
+    local loading_mark = buffer.set_loading_virtual_text(bufnr, loading_line, 'Loading...')
 
     logger.info('Sending request to Provider: ' .. setup.provider .. ', Model:' .. setup.model)
 
@@ -134,27 +126,24 @@ function M.send_request(bufnr)
                 return
             end
 
-            if not started then
-                prepare_stream_response(bufnr)
-                started = true
-            end
-
             if response_text and response_text ~= '' then
+                if not started then
+                    buffer.clear_loading_virtual_text(bufnr, loading_mark)
+                    started = true
+                end
                 append_text_at_end(bufnr, response_text)
             end
         end, function()
-            finalize_stream_response(bufnr, started)
-            buffer.toggle_sending_flag(bufnr)
+            cleanup_request_state(bufnr, loading_mark)
             logger.info('Response appended to markdownLLM chat.')
         end, function(msg)
-            finalize_stream_response(bufnr, started)
-            buffer.toggle_sending_flag(bufnr)
+            cleanup_request_state(bufnr, loading_mark)
             logger.error(msg)
         end)
     end)
     if not send_ok then
+        cleanup_request_state(bufnr, loading_mark)
         logger.error('MarkdownLLM send failed: ' .. tostring(send_err))
-        buffer.toggle_sending_flag(bufnr)
     end
 end
 
