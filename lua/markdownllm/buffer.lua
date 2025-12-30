@@ -177,4 +177,13 @@ function M.append_response(bufnr, response_text)
     end
 end
 
+---Toggle the sending flag for a chat buffer.
+---@param bufnr integer
+---@return nil
+function M.toggle_sending_flag(bufnr)
+    if vim.api.nvim_buf_is_valid(bufnr) then
+        vim.b[bufnr].markdownllm_is_sending = not vim.b[bufnr].markdownllm_is_sending
+    end
+end
+
 return M

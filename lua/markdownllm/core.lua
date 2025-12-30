@@ -65,7 +65,8 @@ function M.send_request(bufnr)
         return
     end
 
-    vim.b[bufnr].markdownllm_is_sending = true
+    buffer.toggle_sending_flag(bufnr)
+
     logger.info('Sending request to Provider: ' .. setup.provider .. ', Model:' .. setup.model)
 
     local send_ok, send_err = pcall(function()
@@ -75,21 +76,15 @@ function M.send_request(bufnr)
                 logger.debug('model text (' .. setup.provider .. ' ' .. setup.model .. '): ' .. response_text)
                 logger.info('Response appended to markdownLLM chat.')
             end
-            if vim.api.nvim_buf_is_valid(bufnr) then
-                vim.b[bufnr].markdownllm_is_sending = false
-            end
+            buffer.toggle_sending_flag(bufnr)
         end, function(msg)
             logger.error(msg)
-            if vim.api.nvim_buf_is_valid(bufnr) then
-                vim.b[bufnr].markdownllm_is_sending = false
-            end
+            buffer.toggle_sending_flag(bufnr)
         end)
     end)
     if not send_ok then
         logger.error('MarkdownLLM send failed: ' .. tostring(send_err))
-        if vim.api.nvim_buf_is_valid(bufnr) then
-            vim.b[bufnr].markdownllm_is_sending = false
-        end
+        buffer.toggle_sending_flag(bufnr)
     end
 end
 
