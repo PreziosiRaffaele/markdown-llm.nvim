@@ -11,6 +11,100 @@ local provider_factory = require('markdownllm.provider_factory')
 local ui = require('markdownllm.ui')
 local util = require('markdownllm.util')
 
+---@class markdownllm.StreamState
+---@field started boolean
+---@field finished boolean
+
+---Append text to the end of the buffer, preserving the current cursor.
+---@param bufnr integer
+---@param text string
+---@return nil
+local function append_text_at_end(bufnr, text)
+    local winid = vim.fn.bufwinid(bufnr)
+    local cursor = nil
+    if winid ~= -1 then
+        cursor = vim.api.nvim_win_get_cursor(winid)
+    end
+
+    local line_count = vim.api.nvim_buf_line_count(bufnr)
+    if line_count == 0 then
+        vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { text })
+        if winid ~= -1 and cursor then
+            vim.api.nvim_win_set_cursor(winid, cursor)
+        end
+        return
+    end
+
+    local last_line = vim.api.nvim_buf_get_lines(bufnr, line_count - 1, line_count, false)[1] or ''
+    local parts = vim.split(text, '\n', { plain = true })
+
+    if #parts == 1 then
+        vim.api.nvim_buf_set_lines(bufnr, line_count - 1, line_count, false, { last_line .. parts[1] })
+    else
+        parts[1] = last_line .. parts[1]
+        vim.api.nvim_buf_set_lines(bufnr, line_count - 1, line_count, false, parts)
+    end
+
+    if winid ~= -1 and cursor then
+        vim.api.nvim_win_set_cursor(winid, cursor)
+    end
+end
+
+---Ensure the buffer is ready to receive a streamed model response.
+---@param bufnr integer
+---@return nil
+local function prepare_stream_response(bufnr)
+    local winid = vim.fn.bufwinid(bufnr)
+    local cursor = nil
+    if winid ~= -1 then
+        cursor = vim.api.nvim_win_get_cursor(winid)
+    end
+
+    local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+    local new_block = {}
+
+    if #lines > 0 and lines[#lines]:match('%S') then
+        table.insert(new_block, '')
+    end
+
+    table.insert(new_block, '## Model')
+    table.insert(new_block, '')
+
+    vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, new_block)
+
+    if winid ~= -1 and cursor then
+        vim.api.nvim_win_set_cursor(winid, cursor)
+    end
+end
+
+---Finalize the streamed response by adding a new user block.
+---@param bufnr integer
+---@param state markdownllm.StreamState
+---@return nil
+local function finalize_stream_response(bufnr, state)
+    if state.finished or not vim.api.nvim_buf_is_valid(bufnr) then
+        return
+    end
+
+    if not state.started then
+        prepare_stream_response(bufnr)
+        state.started = true
+    end
+
+    local winid = vim.fn.bufwinid(bufnr)
+    local cursor = nil
+    if winid ~= -1 then
+        cursor = vim.api.nvim_win_get_cursor(winid)
+    end
+
+    vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, { '', '## User', '' })
+    state.finished = true
+
+    if winid ~= -1 and cursor then
+        vim.api.nvim_win_set_cursor(winid, cursor)
+    end
+end
+
 ---Build the user message text for an action from a selection.
 ---@param action table
 ---@param selection_text string
@@ -70,15 +164,32 @@ function M.send_request(bufnr)
     logger.info('Sending request to Provider: ' .. setup.provider .. ', Model:' .. setup.model)
 
     local send_ok, send_err = pcall(function()
+        local state = { started = false, finished = false }
+
         implementation.send(setup, system_text, messages, function(response_text)
+            if not vim.api.nvim_buf_is_valid(bufnr) then
+                return
+            end
+
+            if not state.started then
+                prepare_stream_response(bufnr)
+                state.started = true
+            end
+
+            if response_text and response_text ~= '' then
+                append_text_at_end(bufnr, response_text)
+            end
+        end, function()
             if vim.api.nvim_buf_is_valid(bufnr) then
-                buffer.append_response(bufnr, response_text)
-                logger.debug('model text (' .. setup.provider .. ' ' .. setup.model .. '): ' .. response_text)
-                logger.info('Response appended to markdownLLM chat.')
+                finalize_stream_response(bufnr, state)
             end
             buffer.toggle_sending_flag(bufnr)
+            logger.info('Response appended to markdownLLM chat.')
         end, function(msg)
             logger.error(msg)
+            if vim.api.nvim_buf_is_valid(bufnr) then
+                finalize_stream_response(bufnr, state)
+            end
             buffer.toggle_sending_flag(bufnr)
         end)
     end)
