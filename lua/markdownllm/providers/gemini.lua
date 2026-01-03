@@ -1,53 +1,25 @@
---- Gemini provider implementation for MarkdownLLM.
+--- Gemini driver implementation for MarkdownLLM.
 ---
 --- Responsibilities:
 --- - Build Gemini-specific payloads.
 --- - Resolve authentication (API key).
---- - Make HTTP request (Streaming).
---- - Parse SSE response.
+--- - Parse SSE/JSON responses.
 ---@module 'markdownllm.providers.gemini'
 
 local M = {}
-local logger = require('markdownllm.logger')
 
-local function build_payload(system_text, messages, setup)
-    local opts = setup.opts or {}
-
-    local payload = {
-        system_instruction = {
-            parts = {
-                {
-                    text = system_text,
-                },
-            },
-        },
-        contents = {},
-    }
-
-    if opts.tools and #opts.tools > 0 then
-        payload.tools = vim.deepcopy(opts.tools)
+---@param text string
+---@return boolean
+---@return table|nil
+local function decode_json(text)
+    if vim.json and vim.json.decode then
+        return pcall(vim.json.decode, text)
     end
-
-    for _, message in ipairs(messages) do
-        table.insert(payload.contents, {
-            role = message.role,
-            parts = {
-                { text = message.text },
-            },
-        })
-    end
-
-    if opts.generation_config then
-        payload.generationConfig = opts.generation_config
-    end
-
-    if opts.payload_overrides then
-        payload = vim.tbl_deep_extend('force', payload, opts.payload_overrides)
-    end
-
-    return payload
+    return pcall(vim.fn.json_decode, text)
 end
 
+---@param body table|nil
+---@return string|nil
 local function extract_text(body)
     local candidate = body and body.candidates and body.candidates[1]
     if not candidate or not candidate.content or not candidate.content.parts then
@@ -68,99 +40,185 @@ local function extract_text(body)
     return table.concat(fragments, '\n')
 end
 
---- Send a chat completion request to Gemini with streaming.
---- @tparam table setup Active setup table (`{ model = ..., api_key_name = ..., opts = ... }`).
---- @tparam string system_text System/instructions block.
---- @tparam table messages List of `{ role = "user"|"model", text = string }`.
---- @tparam function on_chunk Callback `(partial_text:string)` called whenever new text arrives.
---- @tparam function|nil on_complete Callback `()` called when the stream finishes successfully.
---- @tparam function|nil on_error Callback `(message:string)` (defaults to `logger.error`).
---- @treturn nil
-function M.send(setup, system_text, messages, on_chunk, on_complete, on_error)
-    local api_key = os.getenv(setup.api_key_name)
-    if not api_key or api_key == '' then
-        on_error('Gemini API key not found. Set env: ' .. setup.api_key_name)
-        return
+
+---@param messages markdownllm.LLMRequestMessage[]
+---@return string
+---@return markdownllm.LLMRequestMessage[]
+local function split_system_message(messages)
+    local system_text = ''
+    local remaining = {}
+
+    for _, message in ipairs(messages or {}) do
+        if message.role == 'system' and system_text == '' then
+            system_text = message.content or ''
+        else
+            table.insert(remaining, message)
+        end
     end
 
-    local payload = build_payload(system_text, messages, setup)
+    return system_text, remaining
+end
 
-    -- streamGenerateContent with sse
-    local url = string.format(
-        'https://generativelanguage.googleapis.com/v1beta/models/%s:streamGenerateContent?alt=sse',
-        setup.model
-    )
+---@param options table|nil
+---@return table|nil
+local function build_generation_config(options)
+    if type(options) ~= 'table' then
+        return nil
+    end
 
-    local encoded = vim.fn.json_encode(payload)
-    logger.debug('gemini request payload: ' .. encoded)
+    local config = {}
+    if type(options.generation_config) == 'table' then
+        config = vim.deepcopy(options.generation_config)
+    end
 
-    -- Buffer to hold partial chunks from curl
-    local buffer = ""
-    local stderr_buffer = {}
+    if options.temperature ~= nil and config.temperature == nil then
+        config.temperature = options.temperature
+    end
+    if options.top_p ~= nil and config.topP == nil then
+        config.topP = options.top_p
+    end
+    if options.max_tokens ~= nil and config.maxOutputTokens == nil then
+        config.maxOutputTokens = options.max_tokens
+    end
+    if options.stop ~= nil and config.stopSequences == nil then
+        config.stopSequences = options.stop
+    end
+    if options.frequency_penalty ~= nil and config.frequencyPenalty == nil then
+        config.frequencyPenalty = options.frequency_penalty
+    end
+    if options.presence_penalty ~= nil and config.presencePenalty == nil then
+        config.presencePenalty = options.presence_penalty
+    end
+    if options.seed ~= nil and config.seed == nil then
+        config.seed = options.seed
+    end
 
-    vim.system({
-        'curl', '-s', '-N', '-X', 'POST', url,
-        '-H', 'x-goog-api-key: ' .. api_key,
-        '-H', 'Content-Type: application/json',
-        '-d', encoded,
-    }, {
-        stdout = function(_, data)
-            if not data then return end
+    if next(config) == nil then
+        return nil
+    end
+    return config
+end
 
-            -- 1. Append new data to buffer
-            buffer = buffer .. data
+---@param setup table
+---@return table|nil
+---@return string|nil
+function M.new(setup)
+    local api_key = os.getenv(setup.api_key_name or '')
+    if not api_key or api_key == '' then
+        return nil, 'Gemini API key not found. Set env: ' .. tostring(setup.api_key_name)
+    end
 
-            -- 2. Process complete lines within the buffer
-            while true do
-                -- Find the first newline
-                local newline_index = string.find(buffer, "\n")
-                if not newline_index then break end
+    local driver = {
+        stream_format = 'sse',
+    }
 
-                -- Extract the line and remove it from buffer
-                local line = string.sub(buffer, 1, newline_index - 1)
-                buffer = string.sub(buffer, newline_index + 1)
+    ---Build the Gemini request specification.
+    ---@param request markdownllm.LLMRequest
+    ---@return table|nil
+    ---@return string|nil
+    function driver.spec(request)
+        local options = request.options or {}
+        local system_text, remaining = split_system_message(request.messages or {})
 
-                -- 3. Parse SSE 'data: ' lines
-                if vim.startswith(line, "data: ") then
-                    local json_str = string.sub(line, 7)
+        local payload = {
+            contents = {},
+        }
 
-                    -- Schedule the callback interaction
-                    vim.schedule(function()
-                        local ok, body = pcall(vim.fn.json_decode, json_str)
-                        if not ok then
-                            on_error("Gemini JSON decode error: " .. json_str)
-                            return
-                        end
+        if system_text ~= '' then
+            payload.system_instruction = {
+                parts = {
+                    { text = system_text },
+                },
+            }
+        end
 
-                        if body.error then
-                            on_error('Gemini API Error: ' .. (body.error.message or "Unknown"))
-                            return
-                        end
+        for _, message in ipairs(remaining) do
+            local role = message.role == 'assistant' and 'model' or message.role
+            table.insert(payload.contents, {
+                role = role,
+                parts = {
+                    { text = message.content },
+                },
+            })
+        end
 
-                        local text_chunk = extract_text(body)
-                        if text_chunk then
-                            on_chunk(text_chunk)
-                        end
-                    end)
+        if type(options.tools) == 'table' and #options.tools > 0 then
+            payload.tools = vim.deepcopy(options.tools)
+        end
+
+        local generation_config = build_generation_config(options)
+        if generation_config then
+            payload.generationConfig = generation_config
+        end
+
+        if type(options.payload_overrides) == 'table' then
+            payload = vim.tbl_deep_extend('force', payload, options.payload_overrides)
+        end
+
+        local action = request.context.stream and 'streamGenerateContent?alt=sse' or 'generateContent'
+        local url = string.format(
+            'https://generativelanguage.googleapis.com/v1beta/models/%s:%s',
+            request.context.model,
+            action
+        )
+
+        return {
+            url = url,
+            headers = {
+                ['x-goog-api-key'] = api_key,
+                ['Content-Type'] = 'application/json',
+            },
+            body = payload,
+        }
+    end
+
+    ---Parse a single SSE event or JSON response.
+    ---@param event string
+    ---@return string|nil
+    ---@return string|nil
+    ---@return string|nil
+    function driver.parse(event)
+        local chunks = {}
+        local saw_data = false
+
+        for line in event:gmatch('[^\r\n]+') do
+            if vim.startswith(line, 'data: ') then
+                saw_data = true
+                local json_str = line:sub(7)
+                local ok, body = decode_json(json_str)
+                if not ok then
+                    return nil, 'Gemini JSON decode error: ' .. json_str, 'warning'
+                end
+                if body and body.error then
+                    return nil, 'Gemini API error: ' .. (body.error.message or 'Unknown'), 'fatal'
+                end
+
+                local text_chunk = extract_text(body)
+                if text_chunk then
+                    table.insert(chunks, text_chunk)
                 end
             end
-        end,
-        stderr = function(_, data)
-            if data then
-                table.insert(stderr_buffer, data)
-            end
         end
-    }, function(obj)
-        vim.schedule(function()
-            if obj.code ~= 0 then
-                local err_msg = table.concat(stderr_buffer, "")
-                if err_msg == "" then err_msg = "exit code " .. obj.code end
-                on_error('Gemini Request failed: ' .. err_msg)
-                return
+
+        if saw_data then
+            if #chunks == 0 then
+                return nil
             end
-            on_complete()
-        end)
-    end)
+            return table.concat(chunks, '')
+        end
+
+        local ok, body = decode_json(event)
+        if not ok then
+            return nil, 'Gemini JSON decode error: ' .. event, 'fatal'
+        end
+        if body and body.error then
+            return nil, 'Gemini API error: ' .. (body.error.message or 'Unknown'), 'fatal'
+        end
+
+        return extract_text(body)
+    end
+
+    return driver
 end
 
 return M

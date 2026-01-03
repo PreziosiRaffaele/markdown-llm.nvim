@@ -6,8 +6,8 @@ local M = {}
 local buffer = require('markdownllm.buffer')
 local config_mod = require('markdownllm.config')
 local fs = require('markdownllm.fs')
+local llm = require('markdownllm.llm')
 local logger = require('markdownllm.logger')
-local provider_factory = require('markdownllm.provider_factory')
 local ui = require('markdownllm.ui')
 local util = require('markdownllm.util')
 
@@ -83,6 +83,37 @@ local function cleanup_request_state(bufnr, loading_mark)
     buffer.toggle_sending_flag(bufnr)
 end
 
+---Build a provider-neutral request from setup and buffer messages.
+---@param setup table
+---@param system_text string
+---@param messages table[]
+---@return markdownllm.LLMRequest
+local function build_request(setup, system_text, messages)
+    local request_messages = {}
+
+    if system_text and system_text ~= '' then
+        table.insert(request_messages, { role = 'system', content = system_text })
+    end
+
+    for _, message in ipairs(messages or {}) do
+        local role = message.role == 'model' and 'assistant' or message.role
+        table.insert(request_messages, { role = role, content = message.text })
+    end
+
+    return {
+        context = {
+            provider = setup.provider,
+            model = setup.model,
+            stream = setup.stream ~= false,
+            timeout = setup.timeout,
+            api_key_name = setup.api_key_name,
+            base_url = setup.base_url,
+        },
+        messages = request_messages,
+        options = setup.opts or {},
+    }
+end
+
 ---Send the current chat buffer to the configured provider.
 ---@param bufnr integer
 ---@return nil
@@ -106,12 +137,6 @@ function M.send_request(bufnr)
         return
     end
 
-    local ok, implementation = pcall(provider_factory.get, setup.provider)
-    if not ok then
-        logger.error('Failed to get provider implementation: ' .. tostring(implementation))
-        return
-    end
-
     buffer.toggle_sending_flag(bufnr)
     local loading_line = buffer.append_loading_model_block(bufnr)
     local loading_mark = buffer.set_loading_virtual_text(bufnr, loading_line, 'Loading...')
@@ -120,26 +145,34 @@ function M.send_request(bufnr)
 
     local send_ok, send_err = pcall(function()
         local started = false
+        local request = build_request(setup, system_text, messages)
 
-        implementation.send(setup, system_text, messages, function(response_text)
-            if not vim.api.nvim_buf_is_valid(bufnr) then
-                return
-            end
-
-            if response_text and response_text ~= '' then
-                if not started then
-                    buffer.clear_loading_virtual_text(bufnr, loading_mark)
-                    started = true
+        llm.send(request, {
+            on_chunk = function(response_text)
+                if not vim.api.nvim_buf_is_valid(bufnr) then
+                    return
                 end
-                append_text_at_end(bufnr, response_text)
-            end
-        end, function()
-            cleanup_request_state(bufnr, loading_mark)
-            logger.info('Response appended to markdownLLM chat.')
-        end, function(msg)
-            cleanup_request_state(bufnr, loading_mark)
-            logger.error(msg)
-        end)
+
+                if response_text and response_text ~= '' then
+                    if not started then
+                        buffer.clear_loading_virtual_text(bufnr, loading_mark)
+                        started = true
+                    end
+                    append_text_at_end(bufnr, response_text)
+                end
+            end,
+            on_complete = function()
+                cleanup_request_state(bufnr, loading_mark)
+                logger.info('Response appended to markdownLLM chat.')
+            end,
+            on_error = function(msg)
+                cleanup_request_state(bufnr, loading_mark)
+                logger.error(msg)
+            end,
+            on_warning = function(msg)
+                logger.warn(msg)
+            end,
+        })
     end)
     if not send_ok then
         cleanup_request_state(bufnr, loading_mark)

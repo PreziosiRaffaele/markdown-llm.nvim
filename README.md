@@ -41,6 +41,7 @@ The only optional suggestion is to use [render-markdown.nvim](https://github.com
         provider = "openai",
         model = "gpt-5.2",
         api_key_name = "OPENAI_API_KEY",
+        stream = true,
         opts = {},
       },
     },
@@ -76,6 +77,7 @@ require("markdownllm").setup({
       provider = "openai",
       model = "gpt-5.2",
       api_key_name = "OPENAI_API_KEY",
+      stream = true,
       opts = {},
     },
   },
@@ -117,10 +119,12 @@ Help docs are available in `doc/markdownllm.txt` after running `:helptags`.
 - `default_setup_name` name of the default setup used for new chats.
 - `setups` list of provider/model setups:
   - `name` unique label used in selectors.
-  - `provider` provider name: `openai`, `gemini`, `grok`.
+  - `provider` provider name: `openai`, `gemini`, `grok`, `deepseek`.
   - `model` model id passed to the provider.
   - `api_key_name` environment variable containing the API key.
-  - `base_url` optional override for OpenAI/Grok endpoints.
+  - `base_url` optional override for OpenAI-compatible endpoints.
+  - `stream` enable streaming responses (default: `true`).
+  - `timeout` optional request timeout in milliseconds.
   - `opts` provider-specific options merged into payload.
 - `presets` list of prompt presets used to seed new chats:
   - `name` label shown in the preset selector.
@@ -166,6 +170,13 @@ setups = {
     provider = "grok",
     model = "grok-code-fast-1",
     api_key_name = "GROK_API_KEY",
+  },
+  {
+    name = "DeepSeek Chat",
+    provider = "deepseek",
+    model = "deepseek-chat",
+    api_key_name = "DEEPSEEK_API_KEY",
+    base_url = "https://api.deepseek.com/v1/chat/completions",
   },
   {
     name = "Gemini-2.5-pro",

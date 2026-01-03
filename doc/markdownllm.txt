@@ -88,10 +88,12 @@ default_setup_name
 setups
     List of provider/model setups. Each setup is a table with:
       name          (string) unique label used in selectors.
-      provider      (string) provider name: "openai", "gemini", "grok".
+      provider      (string) provider name: "openai", "gemini", "grok", "deepseek".
       model         (string) model id passed to the provider.
       api_key_name  (string) environment variable containing the API key.
-      base_url      (string|nil) optional override for OpenAI/Grok endpoints.
+      base_url      (string|nil) optional override for OpenAI-compatible endpoints.
+      stream        (boolean|nil) enable streaming responses (default: true).
+      timeout       (number|nil) optional request timeout in milliseconds.
       opts          (table|nil) provider-specific options merged into payload.
 
 presets
@@ -130,9 +132,8 @@ Keymap fields:
 Providers                                                  *markdownllm-providers*
 
 The following providers are currently supported:
-  Open AI
-  Google
-  xAI
+  OpenAI-compatible (OpenAI, xAI, DeepSeek)
+  Google (Gemini)
 
 Other providers can be added per request. Raise an issue or PR to add a new provider.
 

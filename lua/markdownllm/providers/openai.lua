@@ -1,44 +1,38 @@
---- OpenAI provider implementation for MarkdownLLM.
+--- OpenAI-compatible driver implementation for MarkdownLLM.
 ---
 --- Responsibilities:
---- - Build OpenAI-specific payloads.
+--- - Build OpenAI-compatible payloads.
 --- - Resolve authentication (API key).
---- - Make HTTP request (Streaming).
---- - Parse SSE response.
+--- - Parse SSE/JSON responses.
 ---@module 'markdownllm.providers.openai'
 
 local M = {}
-local logger = require('markdownllm.logger')
 
-local function build_payload(system_text, messages, setup)
-    local opts = setup.opts or {}
-
-    local chat_messages = {
-        {
-            role = 'system',
-            content = system_text,
-        },
-    }
-
-    for _, message in ipairs(messages) do
-        local role = message.role == 'model' and 'assistant' or 'user'
-        table.insert(chat_messages, { role = role, content = message.text })
+---@param setup table
+---@return string
+local function provider_label(setup)
+    if setup and setup.provider_label and setup.provider_label ~= '' then
+        return setup.provider_label
     end
-
-    local payload = {
-        model = setup.model,
-        messages = chat_messages,
-        stream = true,
-    }
-
-    if opts then
-        payload = vim.tbl_deep_extend('force', payload, opts)
+    if setup and setup.provider_name and setup.provider_name ~= '' then
+        return setup.provider_name
     end
-
-    return payload
+    return 'OpenAI-compatible'
 end
 
-local function extract_stream_text(body)
+---@param text string
+---@return boolean
+---@return table|nil
+local function decode_json(text)
+    if vim.json and vim.json.decode then
+        return pcall(vim.json.decode, text)
+    end
+    return pcall(vim.fn.json_decode, text)
+end
+
+---@param body table|nil
+---@return string|nil
+local function extract_text(body)
     local choice = body and body.choices and body.choices[1]
     if not choice then
         return nil
@@ -61,111 +55,111 @@ local function extract_stream_text(body)
     return nil
 end
 
---- Send a chat completion request to OpenAI with streaming.
---- @tparam table setup Active setup table (`{ model = ..., api_key_name = ..., base_url = ..., opts = ... }`).
---- @tparam string system_text System/instructions block.
---- @tparam table messages List of `{ role = "user"|"model", text = string }`.
---- @tparam function on_chunk Callback `(partial_text:string)` called whenever new text arrives.
---- @tparam function|nil on_complete Callback `()` called when the stream finishes successfully.
---- @tparam function|nil on_error Callback `(message:string)` (defaults to `logger.error`).
---- @treturn nil
-function M.send(setup, system_text, messages, on_chunk, on_complete, on_error)
-    on_error = on_error or logger.error
 
-    local api_key = os.getenv(setup.api_key_name)
+---@param options table|nil
+---@return table
+local function normalize_options(options)
+    if type(options) ~= 'table' then
+        return {}
+    end
+    local normalized = vim.deepcopy(options)
+    normalized.payload_overrides = nil
+    return normalized
+end
+
+---@param setup table
+---@return table|nil
+---@return string|nil
+function M.new(setup)
+    local label = provider_label(setup or {})
+    local api_key = os.getenv(setup.api_key_name or '')
     if not api_key or api_key == '' then
-        on_error('OpenAI API key not found. Set environment variable ' .. setup.api_key_name .. '.')
-        return
+        return nil, label .. ' API key not found. Set environment variable ' .. tostring(setup.api_key_name) .. '.'
     end
 
-    local payload = build_payload(system_text, messages, setup)
-    local encoded = vim.fn.json_encode(payload)
-    local url = setup.base_url or 'https://api.openai.com/v1/chat/completions'
+    local base_url = setup.base_url or 'https://api.openai.com/v1/chat/completions'
+    local driver = {
+        stream_format = 'sse',
+    }
 
-    logger.debug('request (openai ' .. setup.model .. '): ' .. encoded)
+    ---Build the OpenAI request specification.
+    ---@param request markdownllm.LLMRequest
+    ---@return table|nil
+    ---@return string|nil
+    function driver.spec(request)
+        local payload = {
+            model = request.context.model,
+            messages = request.messages,
+            stream = request.context.stream and true or false,
+        }
 
-    local buffer = ""
-    local stderr_buffer = {}
-    local completed = false
+        local options = request.options or {}
+        payload = vim.tbl_deep_extend('force', payload, normalize_options(options))
+        if type(options.payload_overrides) == 'table' then
+            payload = vim.tbl_deep_extend('force', payload, options.payload_overrides)
+        end
 
-    vim.system({
-        'curl',
-        '-s',
-        '-N',
-        '-X',
-        'POST',
-        url,
-        '-H',
-        'Content-Type: application/json',
-        '-H',
-        'Authorization: Bearer ' .. api_key,
-        '-d',
-        encoded,
-    }, {
-        stdout = function(_, data)
-            if not data then return end
+        return {
+            url = base_url,
+            headers = {
+                ['Content-Type'] = 'application/json',
+                ['Authorization'] = 'Bearer ' .. api_key,
+            },
+            body = payload,
+        }
+    end
 
-            buffer = buffer .. data
+    ---Parse a single SSE event or JSON response.
+    ---@param event string
+    ---@return string|nil
+    ---@return string|nil
+    ---@return string|nil
+    function driver.parse(event)
+        local chunks = {}
+        local saw_data = false
 
-            while true do
-                local newline_index = string.find(buffer, "\n")
-                if not newline_index then break end
+        for line in event:gmatch('[^\r\n]+') do
+            if vim.startswith(line, 'data: ') then
+                saw_data = true
+                local json_str = line:sub(7)
+                if json_str == '[DONE]' then
+                    return nil
+                end
 
-                local line = string.sub(buffer, 1, newline_index - 1)
-                buffer = string.sub(buffer, newline_index + 1)
+                local ok, body = decode_json(json_str)
+                if not ok then
+                    return nil, label .. ' JSON decode error: ' .. json_str, 'warning'
+                end
+                if body and body.error then
+                    return nil, label .. ' API error: ' .. (body.error.message or vim.inspect(body.error)), 'fatal'
+                end
 
-                line = string.gsub(line, "\r$", "")
-                if vim.startswith(line, "data: ") then
-                    local json_str = string.sub(line, 7)
-                    if json_str == "[DONE]" then
-                        if not completed then
-                            completed = true
-                            if on_complete then
-                                vim.schedule(on_complete)
-                            end
-                        end
-                        return
-                    end
-
-                    vim.schedule(function()
-                        local ok, body = pcall(vim.fn.json_decode, json_str)
-                        if not ok then
-                            on_error("OpenAI JSON decode error: " .. json_str)
-                            return
-                        end
-
-                        if body.error then
-                            on_error('OpenAI API error: ' .. (body.error.message or vim.inspect(body.error)))
-                            return
-                        end
-
-                        local text_chunk = extract_stream_text(body)
-                        if text_chunk then
-                            on_chunk(text_chunk)
-                        end
-                    end)
+                local text_chunk = extract_text(body)
+                if text_chunk then
+                    table.insert(chunks, text_chunk)
                 end
             end
-        end,
-        stderr = function(_, data)
-            if data then
-                table.insert(stderr_buffer, data)
-            end
-        end,
-    }, function(obj)
-        vim.schedule(function()
-            if obj.code ~= 0 then
-                local err_msg = table.concat(stderr_buffer, "")
-                if err_msg == "" then err_msg = "exit code " .. obj.code end
-                on_error('Request failed: ' .. err_msg)
-                return
-            end
+        end
 
-            if not completed and on_complete then
-                on_complete()
+        if saw_data then
+            if #chunks == 0 then
+                return nil
             end
-        end)
-    end)
+            return table.concat(chunks, '')
+        end
+
+        local ok, body = decode_json(event)
+        if not ok then
+            return nil, label .. ' JSON decode error: ' .. event, 'fatal'
+        end
+        if body and body.error then
+            return nil, label .. ' API error: ' .. (body.error.message or vim.inspect(body.error)), 'fatal'
+        end
+
+        return extract_text(body)
+    end
+
+    return driver
 end
 
 return M

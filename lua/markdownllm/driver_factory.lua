@@ -1,0 +1,46 @@
+--- Driver factory for MarkdownLLM.
+---
+--- Maps a provider name (e.g. `gemini`, `openai`) to a driver implementation.
+---@module 'markdownllm.driver_factory'
+
+local M = {}
+
+local openai_compatible = require('markdownllm.providers.openai')
+local providers = {
+    gemini = require('markdownllm.providers.gemini'),
+    openai = openai_compatible,
+    grok = openai_compatible,
+    deepseek = openai_compatible,
+}
+
+--- Resolve a provider driver by name.
+--- @tparam string provider_name Provider identifier (e.g. `gemini`, `openai`).
+--- @tparam table setup Provider setup/config context.
+--- @treturn table|nil driver Driver module exposing `spec(...)` and `parse(...)`.
+--- @treturn string|nil error
+function M.get(provider_name, setup)
+    local implementation = providers[provider_name]
+    if not implementation then
+        return nil, 'Provider ' .. tostring(provider_name) .. ' is not supported.'
+    end
+
+    if type(implementation.new) ~= 'function' then
+        return nil, 'Provider ' .. tostring(provider_name) .. ' does not expose a driver.'
+    end
+
+    local setup_copy = vim.deepcopy(setup or {})
+    if not setup_copy.provider_name or setup_copy.provider_name == '' then
+        setup_copy.provider_name = provider_name
+    end
+    local ok, driver_or_err = pcall(implementation.new, setup_copy)
+    if not ok then
+        return nil, tostring(driver_or_err)
+    end
+    if type(driver_or_err) ~= 'table' or type(driver_or_err.spec) ~= 'function' or type(driver_or_err.parse) ~= 'function' then
+        return nil, 'Provider ' .. tostring(provider_name) .. ' driver is invalid.'
+    end
+
+    return driver_or_err
+end
+
+return M
