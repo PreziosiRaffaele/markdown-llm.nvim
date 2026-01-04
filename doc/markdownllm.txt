@@ -138,6 +138,53 @@ The following providers are currently supported:
 Other providers can be added per request. Raise an issue or PR to add a new provider.
 
 ==============================================================================
+LLM Engine                                                     *markdownllm-llm*
+
+`markdownllm.llm` exposes the low-level request API used by the plugin. You can
+use it directly to send a completion request from Lua (for example, inside your
+own plugin or command).
+
+Usage:
+>
+  local llm = require("markdownllm.llm")
+
+  local request = {
+    context = {
+      provider = "openai",
+      model = "gpt-4o-mini",
+      api_key_name = "OPENAI_API_KEY",
+      stream = true,
+      timeout = 30000, -- ms
+    },
+    messages = {
+      { role = "system", content = "You are a concise assistant." },
+      { role = "user", content = "Explain Lua metatables in one paragraph." },
+    },
+    options = {},
+  }
+
+  llm.send(request, {
+    on_chunk = function(text)
+      -- Streaming token(s) arrive here.
+      vim.api.nvim_out_write(text)
+    end,
+    on_complete = function()
+      vim.api.nvim_out_write("\n")
+    end,
+    on_warning = function(warn)
+      vim.notify(warn, vim.log.levels.WARN)
+    end,
+    on_error = function(err)
+      vim.notify(err, vim.log.levels.ERROR)
+    end,
+  })
+<
+
+`request.context` mirrors the setup table: provider/model selection, API key
+name, optional base_url/timeout, and a `stream` flag. `messages` is the standard
+list of role/content pairs. `options` is passed through to the provider driver.
+
+==============================================================================
 Notes                                                        *markdownllm-notes*
 
 - After installing, run :helptags to generate help tags for this file.
