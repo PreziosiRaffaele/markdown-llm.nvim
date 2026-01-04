@@ -14,7 +14,6 @@ lua/
     ├── fs.lua            # Filesystem operations (saving/loading chats)
     ├── core.lua          # Core application logic and workflows
     ├── logger.lua        # Logging utilities
-    ├── provider_factory.lua # Provider selection/creation
     └── providers/        # LLM provider implementations
         ├── gemini.lua
         ├── grok.lua
@@ -23,6 +22,18 @@ lua/
 
 ## Core Principles
 All modifications to this repository must adhere to the core tenets of the Unix philosophy. The goal is a system composed of small, simple, and well-defined parts that work together effectively.
+
+## LLM Engine Contract
+Keep the low-level LLM engine reusable and separate from Neovim UI/buffer workflows.
+
+- **Separation of Concerns**: `llm.lua` orchestrates requests; `core.lua` owns Neovim buffers, UI, and state. Entrypoints should not know provider internals.
+- **Template-Method Engine**: The engine defines the flow and delegates provider-specific work via a small driver contract (`spec` and `parse`). The engine owns stream buffering and feeds complete events to `driver.parse`.
+- **Callbacks Contract**:
+  - `on_error(err)`: fatal; aborts the request and stops streaming.
+  - `on_warning(warn)`: non-fatal; streaming continues.
+  - `on_chunk(text)`: streaming text fragments.
+  - `on_complete()`: called once on successful completion.
+- **Request Contract**: Provider-agnostic request shape with `context`, `messages`, and `options`. Drivers map/transform these fields to provider-specific payloads as needed.
 
 ### 1. Do One Thing and Do It Well (Single Responsibility Principle)
 - **Principle**: Each component should focus on a single, well-defined task.
