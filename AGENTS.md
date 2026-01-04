@@ -14,7 +14,6 @@ lua/
     ├── fs.lua            # Filesystem operations (saving/loading chats)
     ├── core.lua          # Core application logic and workflows
     ├── logger.lua        # Logging utilities
-    ├── provider_factory.lua # Provider selection/creation
     └── providers/        # LLM provider implementations
         ├── gemini.lua
         ├── grok.lua

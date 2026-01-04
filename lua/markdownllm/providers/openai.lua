@@ -8,6 +8,12 @@
 
 local M = {}
 
+local DEFAULT_BASE_URLS = {
+    openai = 'https://api.openai.com/v1/chat/completions',
+    grok = 'https://api.x.ai/v1/chat/completions',
+    deepseek = 'https://api.deepseek.com/v1/chat/completions',
+}
+
 ---@param setup table
 ---@return string
 local function provider_label(setup)
@@ -68,6 +74,19 @@ local function normalize_options(options)
 end
 
 ---@param setup table
+---@return string
+local function resolve_base_url(setup)
+    if setup.base_url and setup.base_url ~= '' then
+        return setup.base_url
+    end
+    local provider_name = setup.provider_name
+    if provider_name and DEFAULT_BASE_URLS[provider_name] then
+        return DEFAULT_BASE_URLS[provider_name]
+    end
+    return DEFAULT_BASE_URLS.openai
+end
+
+---@param setup table
 ---@return table|nil
 ---@return string|nil
 function M.new(setup)
@@ -77,7 +96,7 @@ function M.new(setup)
         return nil, label .. ' API key not found. Set environment variable ' .. tostring(setup.api_key_name) .. '.'
     end
 
-    local base_url = setup.base_url or 'https://api.openai.com/v1/chat/completions'
+    local base_url = resolve_base_url(setup)
     local driver = {
         stream_format = 'sse',
     }
