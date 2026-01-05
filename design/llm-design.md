@@ -1,31 +1,23 @@
-# Separate LLM Engine from Neovim UI/Buffer Workflows
+# Separate LLM chat-completion Engine
 ## LLM Engine
 MarkdownLLm has a separate LLM engine for chat-completion requests. The engine can be used by different entrypoints.
 
 ## Design Summary
-- Add an llm module that can orchestrate a request and can be used by different entrypoints.
-- Entrypoints shouldn't need to know about the provider implementation. However they need to specify the provider in the request.
-- Define a contract for the request.
-- The llm has a template design pattern. There is a single function that orchestrates the request and delegates to provider-specific functions.
-- Since most of the providers adhere to openai standards, we can use the same driver implementation for most of them (openai, grok, deepseek)
-- Some providers can use different implementation as Antrophic.
-- Keep `core.lua` focused on Neovim buffers, UI, and state.
-- Include an explicit streaming toggle in the request/setup.
+The llm module exposes a single function **send** that orchestrates the chat-completion request and delegates to provider-specific functions.
+The function **send** accepts a request object and a table of callbacks.
 
-## Template-Method Style Engine
-The engine orchestrates a standard flow; providers implement details via a small contract.
-The engine owns stream buffering and feeds `driver.parse` complete events (SSE or JSONL),
-so providers stay stateless and focus on parsing a single event.
+## Template Pattern llm.lua
+The engine orchestrates a flow; drivers implement details via a small contract.
+The engine owns stream buffering and feeds `driver.parse` complete events (SSE or JSONL), so providers stay stateless and focus on parsing a single event.
 
 ## Callbacks Contract
-Callbacks distinguish terminal errors from recoverable issues.
 - `on_error(err)`: fatal; the engine aborts the request and stops streaming.
 - `on_warning(warn)`: non-fatal; used for recoverable parse issues while streaming continues.
 - `on_chunk(text)`: streaming text fragments; called zero or more times.
 - `on_complete()`: called once on successful completion.
 
 ## Request 
-The llm define a clear interface for the request. The request is provider agnostic.
+llm.lua defines a clear interface for the request. The request is provider agnostic.
 
 #### 1. Context (`request.context`)
 *Meta-information used by the engine for routing, driver selection, and request lifecycle management.*
@@ -47,7 +39,6 @@ Array of message objects, where each object contains:
 | **`role`** | `string` | The entity sending the message. Common values: `"system"`, `"user"`, `"assistant"`. |
 | **`content`** | `string` | The text content of the message. |
 
-> **Note:** For providers that require the system prompt to be a top-level field (like Anthropic), the *driver* is responsible for extracting the `"system"` message from this list and formatting it correctly.
 
 #### 3. Options (`request.options`)
 *Standardized hyperparameters supported by the majority of LLM providers. The Driver is responsible for mapping these standard keys to the specific API field names (e.g., mapping `max_tokens` to `max_completion_tokens`).*
@@ -64,81 +55,93 @@ Array of message objects, where each object contains:
 | **`tools`** | `table` | A list of tool definitions (function calling schemas) available to the model. |
 
 
-### Example Configuration (Lua)
+### Example Non-Streaming Request 
 
 ```lua
+local response = {}
 local req = {
   context = {
     provider = "openai",
     model = "gpt-4o",
-    stream = true,
+    stream = false,
+    api_key_name = "OPENAI_API_KEY",
   },
   messages = {
     { role = "system", content = "You are a concise coding assistant." },
-    { role = "user", content = "Explain the Single Responsibility Principle." }
+    { role = "user", content = "Summarize the Single Responsibility Principle." }
   },
   options = {
-    temperature = 0.5,
-    max_tokens = 1000,
+    temperature = 0.3,
+    max_tokens = 400,
   }
 }
+
+require("markdownllm.llm").send(req, {
+  on_chunk = function(text)
+    table.insert(response, text)
+  end,
+  on_complete = function()
+    local output = table.concat(response, "")
+    print(output)
+  end,
+  on_error = function(err)
+    vim.notify(err, vim.log.levels.ERROR)
+  end,
+})
 ```
 
-### Template Pattern llm.lua
-Use a single engine function that defines the algorithm steps and delegates
-provider-specific steps to functions on the provider module.
-This keeps the algorithm centralized while letting each provider supply the
-details via its own functions.
-
 ## Class Diagram
-```plantuml
-@startuml
-!theme reddress-darkgreen
+```mermaid
+classDiagram
+    note for llm "send the request using **vim.system**"
 
-class "llm" <<module>> {
-    + send(request, callbacks) : abort
-}
+    class llm {
+        <<module>>
+        +send(request, callbacks) abort
+    }
 
-note left of llm: send the request using **vim.system**
+    class abort {
+        <<function>>
+        +call() void
+    }
 
-interface "abort" <<function>> {
-  + call() : void
-}
+    class driver_factory {
+        <<module>>
+        +get(provider) driver
+    }
 
-class "driver_factory" << module >> {
-    + get(provider) : driver
-}
+    class openai {
+        <<module>>
+        +new(api_key, base_url) driver
+    }
 
-class "openai" << module >> {
-    + new(api_key, base_url) : driver
-}
-class "gemini" << module >> {
-    + new(api_key) : driver
-}
+    class gemini {
+        <<module>>
+        +new(api_key) driver
+    }
 
-class "driver" <<table>> {
-    + spec(request) : {url, headers, body} 
-    + parse(chunk) : string
-}
+    class driver {
+        <<table>>
+        +spec(request) Map
+        +parse(chunk) string
+    }
 
-class "request" <<table>> {
-    + context: {provider, model, stream}
-    + messages: [{role, content}]
-    + options: {temp, top_p, ...}
-}
+    class request {
+        <<table>>
+        +context
+        +messages
+        +options
+    }
 
-' Relationships
-llm ..> request : uses
-llm ..> abort : returns
-llm ..> driver_factory : uses
+    %% Relationships
+    llm ..> request : uses
+    llm ..> abort : returns
+    llm ..> driver_factory : uses
 
-openai ..> driver : returns
-gemini ..> driver : returns
+    openai ..> driver : returns
+    gemini ..> driver : returns
 
-driver_factory ..> openai : uses
-driver_factory ..> gemini : uses
-
-driver_factory ..> driver : returns
-
-@enduml
+    driver_factory ..> openai : uses
+    driver_factory ..> gemini : uses
+    driver_factory ..> driver : returns
 ```
