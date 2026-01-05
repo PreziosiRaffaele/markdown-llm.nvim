@@ -20,6 +20,10 @@ local util = require('markdownllm.util')
 ---@param text string
 ---@return nil
 local function append_text_at_end(bufnr, text)
+    if not vim.api.nvim_buf_is_valid(bufnr) then
+        return
+    end
+
     local line_count = vim.api.nvim_buf_line_count(bufnr)
     if line_count == 0 then
         vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { text })
@@ -166,6 +170,7 @@ function M.send_request(bufnr)
                 logger.info('Response appended to markdownLLM chat.')
             end,
             on_error = function(msg)
+                append_text_at_end(bufnr, msg)
                 cleanup_request_state(bufnr, loading_mark)
                 logger.error(msg)
             end,
@@ -175,6 +180,7 @@ function M.send_request(bufnr)
         })
     end)
     if not send_ok then
+        append_text_at_end(bufnr, tostring(send_err))
         cleanup_request_state(bufnr, loading_mark)
         logger.error('MarkdownLLM send failed: ' .. tostring(send_err))
     end

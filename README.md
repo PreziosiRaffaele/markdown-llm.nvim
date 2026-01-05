@@ -249,9 +249,8 @@ actions = {
 
 The following providers are currently supported:
 
-- `Open AI`
-- `Google`
-- `xAI`
+- `OpenAI-compatible (OpenAI, xAI, DeepSeek)`
+- `Google (Gemini)`
 
 Other providers can be added per request. Raise an issue or PR to add a new provider.
 

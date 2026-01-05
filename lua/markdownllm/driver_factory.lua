@@ -32,15 +32,14 @@ function M.get(provider_name, setup)
     if not setup_copy.provider_name or setup_copy.provider_name == '' then
         setup_copy.provider_name = provider_name
     end
-    local ok, driver_or_err = pcall(implementation.new, setup_copy)
-    if not ok then
-        return nil, tostring(driver_or_err)
-    end
-    if type(driver_or_err) ~= 'table' or type(driver_or_err.spec) ~= 'function' or type(driver_or_err.parse) ~= 'function' then
-        return nil, 'Provider ' .. tostring(provider_name) .. ' driver is invalid.'
+
+    local driver, error = implementation.new(setup_copy)
+
+    if not driver then
+        return nil, error
     end
 
-    return driver_or_err
+    return driver
 end
 
 return M
