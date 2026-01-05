@@ -24,7 +24,7 @@ llm.lua defines a clear interface for the request. The request is provider agnos
 
 | Property | Type | Description |
 | :--- | :--- | :--- |
-| **`provider`** | `string` | The identifier for the service to use (e.g., `"openai"`, `"anthropic"`, `"gemini"`).| 
+| **`provider`** | `string` | The identifier for the service to use (e.g., `"openai"`, `"deepseek"`, `"gemini"`).| 
 | **`model`** | `string` | The specific model ID to target (e.g., `"gpt-4-turbo"`, `"claude-3-opus-20240229"`). |
 | **`stream`** | `boolean` | If `true`, the engine expects SSE and calls `callbacks.on_chunk` incrementally. |
 | **`timeout`** | `integer` | *(Optional)* The timeout in milliseconds for the request connection/read. |
