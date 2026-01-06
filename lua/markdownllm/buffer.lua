@@ -289,13 +289,14 @@ local function format_yaml_value(value)
     return format_yaml_scalar(value)
 end
 
----Build a new chat buffer template.
+---Build a new chat buffer template with YAML frontmatter.
 ---@param instruction_text string|nil
+---@param setup table
 ---@return string[]
-function M.chat_template(instruction_text)
-    local template = {
-        '# System',
-    }
+function M.chat_template(instruction_text, setup)
+    local template = M.serialize_setup_to_yaml(setup)
+    table.insert(template, '')
+    table.insert(template, '# System')
 
     if instruction_text and instruction_text ~= '' then
         local lines = vim.split(instruction_text, '\n', { plain = true })
@@ -445,12 +446,22 @@ function M.update_setup_in_buffer(bufnr, setup)
     return nil, nil
 end
 
----Parse a chat buffer into system text and message list.
+---Parse a chat buffer into setup, system text, and message list.
 ---@param bufnr integer
+---@return table|nil
 ---@return string
 ---@return table[]
 function M.parse_buffer(bufnr)
     local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+    local setup, setup_err = M.parse_setup_from_buffer(bufnr)
+    local start_idx, end_idx, frontmatter_err = find_frontmatter_range(lines)
+    if frontmatter_err and not setup_err then
+        setup_err = frontmatter_err
+    end
+    if setup_err then
+        logger.warn('Invalid YAML frontmatter: ' .. setup_err)
+    end
+
     local system_lines = {}
     local messages = {}
     local mode = 'system'
@@ -467,7 +478,13 @@ function M.parse_buffer(bufnr)
         accumulator = {}
     end
 
-    for _, line in ipairs(lines) do
+    local start_line = 1
+    if start_idx and end_idx then
+        start_line = end_idx + 1
+    end
+
+    for i = start_line, #lines do
+        local line = lines[i]
         if line:match('^#%s+System') then
             flush()
             mode = 'system'
@@ -496,7 +513,7 @@ function M.parse_buffer(bufnr)
     flush()
 
     local system_text = util.trim(table.concat(system_lines, '\n'))
-    return system_text, messages
+    return setup, system_text, messages
 end
 
 ---Check if a buffer name already exists.
