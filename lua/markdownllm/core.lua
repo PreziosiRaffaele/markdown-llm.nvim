@@ -143,7 +143,7 @@ function M.send_request(bufnr)
 
     buffer.toggle_sending_flag(bufnr)
     local loading_line = buffer.append_loading_model_block(bufnr)
-    local loading_mark = buffer.set_loading_virtual_text(bufnr, loading_line, 'Loading...')
+    local loading_mark = buffer.set_loading_virtual_text(bufnr, loading_line, 'Thinking...')
 
     logger.info('Sending request to Provider: ' .. setup.provider .. ', Model:' .. setup.model)
 
