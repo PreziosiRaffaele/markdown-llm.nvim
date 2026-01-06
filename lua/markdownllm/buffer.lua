@@ -549,15 +549,6 @@ function M.next_chat_name()
     end
 end
 
----@param bufnr integer
----@param setup table
----@return nil
-function M.apply_setup_to_buffer(bufnr, setup)
-    local buffer_setup = vim.deepcopy(setup)
-    buffer_setup.name = nil
-    vim.b[bufnr].markdownllm_setup = buffer_setup
-end
-
 ---Replace the last user block in a chat buffer.
 ---@param bufnr integer
 ---@param user_text string|nil

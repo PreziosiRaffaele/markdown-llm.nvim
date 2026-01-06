@@ -21,7 +21,6 @@ Use your plugin manager and load the module in your config:
         provider = "openai",
         model = "gpt-4o-mini",
         api_key_name = "OPENAI_API_KEY",
-        opts = {},
       },
     },
     presets = {
@@ -33,7 +32,6 @@ Use your plugin manager and load the module in your config:
       sendChat = "<leader>ms",
       selectChatSetup = "<leader>mc",
       selectDefaultSetup = "<leader>md",
-      editChatSetup = "<leader>me",
       actions = "<leader>ma",
       saveChat = "<leader>mw",
       resumeChat = "<leader>mr",
@@ -58,9 +56,6 @@ Commands                                                     *markdownllm-comman
 
 :MarkLLMSelectDefaultSetup
     Set the default setup for new buffers.
-
-:MarkLLMEditChatSetup
-    Edit the current chat setup in a floating window.
 
 :MarkLLMSaveChat
     Save the current chat buffer to disk.
@@ -92,9 +87,15 @@ setups
       model         (string) model id passed to the provider.
       api_key_name  (string) environment variable containing the API key.
       base_url      (string|nil) optional override for OpenAI-compatible endpoints.
-      stream        (boolean|nil) enable streaming responses (default: true).
       timeout       (number|nil) optional request timeout in milliseconds.
-      opts          (table|nil) provider-specific options merged into payload.
+      temperature   (number|nil) model temperature.
+      max_tokens    (number|nil) model max tokens.
+      top_p         (number|nil) nucleus sampling.
+      stop          (string|table|nil) stop sequence(s).
+      frequency_penalty (number|nil) frequency penalty.
+      presence_penalty  (number|nil) presence penalty.
+      seed          (number|nil) sampling seed.
+      web_search    (boolean|nil) enable provider web search tool when supported.
 
 presets
     List of prompt presets used to seed new chats. Each preset is a table with:
@@ -121,12 +122,26 @@ keymaps
 Keymap fields:
     newChat
     sendChat
-    selectBufferSetup
+    selectChatSetup
     selectDefaultSetup
-    editChatSetup
     actions
     saveChat
     resumeChat
+
+==============================================================================
+Chat Frontmatter                                     *markdownllm-frontmatter*
+
+Each chat buffer begins with YAML frontmatter that mirrors the setup. Edit the
+frontmatter directly to change providers or model options:
+>
+  ---
+  provider: openai
+  model: gpt-5.2
+  api_key_name: OPENAI_API_KEY
+  temperature: 0.2
+  max_tokens: 800
+  ---
+<
 
 ==============================================================================
 Providers                                                  *markdownllm-providers*
@@ -180,9 +195,9 @@ Usage:
   })
 <
 
-`request.context` mirrors the setup table: provider/model selection, API key
-name, optional base_url/timeout, and a `stream` flag. `messages` is the standard
-list of role/content pairs. `options` is passed through to the provider driver.
+`request.context` carries provider/model selection, API key name, optional
+base_url/timeout, and a `stream` flag. `messages` is the standard list of
+role/content pairs. `options` is passed through to the provider driver.
 
 ==============================================================================
 Notes                                                        *markdownllm-notes*

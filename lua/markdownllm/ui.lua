@@ -3,7 +3,6 @@
 
 local M = {}
 
-local buffer = require('markdownllm.buffer')
 local config_mod = require('markdownllm.config')
 local logger = require('markdownllm.logger')
 local util = require('markdownllm.util')
@@ -83,103 +82,6 @@ function M.select_setup(on_select)
             end
         end)
     end)
-end
-
----@param setup table
----@return string[]
-function M.format_setup_for_edit(setup)
-    local header = {
-        '-- MarkdownLLM buffer setup',
-        '-- Edit the table and :write to apply changes to the original buffer.',
-        '',
-    }
-
-    local body = 'return ' .. vim.inspect(setup)
-    local lines = vim.split(body, '\n', { plain = true })
-    vim.list_extend(header, lines)
-    return header
-end
-
----@param lines string[]
----@return table|nil
----@return string|nil
-function M.parse_setup_from_lines(lines)
-    local chunk = table.concat(lines, '\n')
-    local fn, err = load(chunk, '=(markdownllm-setup)')
-    if not fn then
-        return nil, err
-    end
-    local ok, result = pcall(fn)
-    if not ok then
-        return nil, result
-    end
-    if type(result) ~= 'table' then
-        return nil, 'Setup must return a table.'
-    end
-    return result, nil
-end
-
----@param target_bufnr integer
----@return nil
-function M.open_setup_editor(target_bufnr)
-    if not target_bufnr or not vim.api.nvim_buf_is_valid(target_bufnr) then
-        logger.error('Target buffer is not valid.')
-        return
-    end
-
-    local setup = vim.b[target_bufnr].markdownllm_setup
-    if not setup then
-        logger.error('No MarkdownLLM setup found for the current buffer.')
-        return
-    end
-
-    local editor_bufnr = vim.api.nvim_create_buf(false, true)
-    vim.bo[editor_bufnr].filetype = 'lua'
-    vim.bo[editor_bufnr].buftype = 'acwrite'
-    vim.bo[editor_bufnr].bufhidden = 'wipe'
-    vim.bo[editor_bufnr].swapfile = false
-    vim.api.nvim_buf_set_name(editor_bufnr, string.format('markdownLLM-setup-%d.lua', target_bufnr))
-
-    vim.api.nvim_buf_set_lines(editor_bufnr, 0, -1, false, M.format_setup_for_edit(setup))
-
-    local width = math.max(60, math.floor(vim.o.columns * 0.7))
-    local height = math.max(12, math.floor(vim.o.lines * 0.6))
-    local row = math.floor((vim.o.lines - height) * 0.5)
-    local col = math.floor((vim.o.columns - width) * 0.5)
-
-    local winid = vim.api.nvim_open_win(editor_bufnr, true, {
-        relative = 'editor',
-        width = width,
-        height = height,
-        row = row,
-        col = col,
-        style = 'minimal',
-        border = 'rounded',
-    })
-
-    vim.api.nvim_win_set_option(winid, 'wrap', false)
-
-    local group = vim.api.nvim_create_augroup('MarkdownLLMSetupEditor', { clear = false })
-
-    vim.api.nvim_create_autocmd('BufWriteCmd', {
-        group = group,
-        buffer = editor_bufnr,
-        callback = function()
-            local lines = vim.api.nvim_buf_get_lines(editor_bufnr, 0, -1, false)
-            local updated, err = M.parse_setup_from_lines(lines)
-            if not updated then
-                logger.error('Failed to parse setup: ' .. tostring(err))
-                return
-            end
-            if not vim.api.nvim_buf_is_valid(target_bufnr) then
-                logger.error('MarkdownLLM buffer no longer exists.')
-                return
-            end
-            buffer.apply_setup_to_buffer(target_bufnr, updated)
-            vim.bo[editor_bufnr].modified = false
-            logger.info('MarkdownLLM setup updated for the buffer.')
-        end,
-    })
 end
 
 return M

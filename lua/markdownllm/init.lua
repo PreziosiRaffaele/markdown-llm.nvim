@@ -54,13 +54,6 @@ function M.setup(opts)
         util.safe_call(core.select_default_setup)
     end, { desc = 'Select default setup' })
 
-    vim.api.nvim_create_user_command('MarkLLMEditChatSetup', function()
-        util.safe_call(function()
-            local buffer = vim.api.nvim_get_current_buf()
-            require('markdownllm.ui').open_setup_editor(buffer)
-        end)
-    end, { desc = 'Edit chat setup' })
-
     vim.api.nvim_create_user_command('MarkLLMSaveChat', function()
         util.safe_call(core.save_current_buffer)
     end, { desc = 'Save chat' })
@@ -85,10 +78,6 @@ function M.setup(opts)
 
     if config.keymaps and config.keymaps.selectDefaultSetup then
         vim.keymap.set('n', config.keymaps.selectDefaultSetup, ':MarkLLMSelectDefaultSetup<CR>', { desc = 'Select default setup' })
-    end
-
-    if config.keymaps and config.keymaps.editChatSetup then
-        vim.keymap.set('n', config.keymaps.editChatSetup, ':MarkLLMEditChatSetup<CR>', { desc = 'Edit chat setup' })
     end
 
     if config.keymaps and config.keymaps.actions then
