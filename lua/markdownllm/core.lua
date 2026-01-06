@@ -87,6 +87,37 @@ local function cleanup_request_state(bufnr, loading_mark)
     buffer.toggle_sending_flag(bufnr)
 end
 
+---Extract provider options from a flattened setup table.
+---@param setup table|nil
+---@return table|nil
+local function extract_options_from_setup(setup)
+    if type(setup) ~= 'table' then
+        return nil
+    end
+
+    local options = {}
+
+    local function add_option(key, value)
+        if value ~= nil then
+            options[key] = value
+        end
+    end
+
+    add_option('temperature', setup.temperature)
+    add_option('max_tokens', setup.max_tokens)
+    add_option('top_p', setup.top_p)
+    add_option('stop', setup.stop)
+    add_option('frequency_penalty', setup.frequency_penalty)
+    add_option('presence_penalty', setup.presence_penalty)
+    add_option('seed', setup.seed)
+
+    if next(options) == nil then
+        return nil
+    end
+
+    return options
+end
+
 ---Build a provider-neutral request from setup and buffer messages.
 ---@param setup table
 ---@param system_text string
@@ -108,13 +139,13 @@ local function build_request(setup, system_text, messages)
         context = {
             provider = setup.provider,
             model = setup.model,
-            stream = setup.stream ~= false,
+            stream = true,
             timeout = setup.timeout,
             api_key_name = setup.api_key_name,
             base_url = setup.base_url,
         },
         messages = request_messages,
-        options = setup.opts or {},
+        options = extract_options_from_setup(setup),
     }
 end
 
