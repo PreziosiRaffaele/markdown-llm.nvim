@@ -229,6 +229,13 @@ actions = {
     pre_text = "Summarize the following text:\n\n",
   },
   {
+    name = "Rewrite (replace)",
+    preset = "Software Development",
+    type = "replace_visual",
+    pre_text = "Rewrite the selection for clarity:\n\n",
+    shortcut = "<leader>mr",
+  },
+  {
     name = "Explain Code",
     preset = "Software Development",
     type = "code",
@@ -243,6 +250,11 @@ actions = {
   },
 }
 ```
+
+Notes:
+- `type = "replace_visual"` replaces the selected text in-place with the model response.
+- `shortcut` adds a visual-mode keymap for the action, bypassing the action picker.
+- If you run `:MarkLLMRunAction` manually, wrap action names with spaces or parentheses in double quotes.
 
 ## Providers
 

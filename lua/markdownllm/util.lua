@@ -24,13 +24,14 @@ function M.safe_call(fn)
     end)
 end
 
----Read the current visual selection as text.
----@return string
+---Read the current visual selection as text and range coordinates.
+---@return string selection_text
+---@return table|nil selection_range
 function M.get_visual_selection_text()
     local start_pos = vim.api.nvim_buf_get_mark(0, '<')
     local end_pos = vim.api.nvim_buf_get_mark(0, '>')
     if not start_pos or not end_pos then
-        return ''
+        return '', nil
     end
 
     local start_row, start_col = start_pos[1] - 1, start_pos[2]
@@ -42,12 +43,29 @@ function M.get_visual_selection_text()
 
     local mode = vim.fn.visualmode()
     if mode == 'V' then
-        local lines = vim.api.nvim_buf_get_lines(0, start_row, end_row + 1, false)
-        return table.concat(lines, '\n')
+        local line_count = vim.api.nvim_buf_line_count(0)
+        local last_row = math.min(end_row, math.max(line_count - 1, 0))
+        local lines = vim.api.nvim_buf_get_lines(0, start_row, last_row + 1, false)
+        local last_line = lines[#lines] or ''
+        local range = {
+            start_row = start_row,
+            start_col = 0,
+            end_row = last_row,
+            end_col = #last_line,
+            mode = mode,
+        }
+        return table.concat(lines, '\n'), range
     end
 
     local text = vim.api.nvim_buf_get_text(0, start_row, start_col, end_row, end_col + 1, {})
-    return table.concat(text, '\n')
+    local range = {
+        start_row = start_row,
+        start_col = start_col,
+        end_row = end_row,
+        end_col = end_col + 1,
+        mode = mode,
+    }
+    return table.concat(text, '\n'), range
 end
 
 return M
