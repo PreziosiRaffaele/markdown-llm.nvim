@@ -215,6 +215,11 @@ presets = {
     setup = "Gemini-2.5-flash", -- Setup Name Override
     instruction = "You are an Italian native speaker and translator. Write natural Italian and preserve the original meaning.",
   },
+  {
+    name = 'Grammar Check',
+    instruction = 'You are a professional editor. Follow these rules: 1. Correct grammar and punctuation 2. Improve clarity and readability 3. Maintain the original tone and intent 4. Keep the same format (lists stay lists, etc.) 5. Don\'t add explanations or comments',
+    setup = 'Gemini-2.5-flash',
+  },
 }
 ```
 
@@ -229,11 +234,11 @@ actions = {
     pre_text = "Summarize the following text:\n\n",
   },
   {
-    name = "Rewrite (replace)",
-    preset = "Software Development",
-    type = "replace_visual",
-    pre_text = "Rewrite the selection for clarity:\n\n",
-    shortcut = "<leader>mr",
+    name = 'Rewrite',
+    preset = 'Grammar Check',
+    type = 'replace_visual',
+    pre_text = 'Please correct the following text. Return only the revised version without additional comments:',
+    shortcut = '<leader>mr',
   },
   {
     name = "Explain Code",
@@ -254,7 +259,6 @@ actions = {
 Notes:
 - `type = "replace_visual"` replaces the selected text in-place with the model response.
 - `shortcut` adds a visual-mode keymap for the action, bypassing the action picker.
-- If you run `:MarkLLMRunAction` manually, wrap action names with spaces or parentheses in double quotes.
 
 ## Providers
 
