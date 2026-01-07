@@ -39,9 +39,12 @@ function M.setup(opts)
         util.safe_call(core.send_current_buffer)
     end, { desc = 'Send chat' })
 
-    vim.api.nvim_create_user_command('MarkLLMRunAction', function()
-        util.safe_call(core.action_from_visual)
-    end, { range = true, desc = 'Run action' })
+    vim.api.nvim_create_user_command('MarkLLMRunAction', function(opts)
+        util.safe_call(function()
+            local action_name = opts.fargs[1]
+            core.action_from_visual(action_name)
+        end)
+    end, { range = true, nargs = '?', desc = 'Run action' })
 
     vim.api.nvim_create_user_command('MarkLLMSelectBufferSetup', function()
         util.safe_call(function()
@@ -73,15 +76,31 @@ function M.setup(opts)
     end
 
     if config.keymaps and config.keymaps.selectChatSetup then
-        vim.keymap.set('n', config.keymaps.selectChatSetup, ':MarkLLMSelectBufferSetup<CR>', { desc = 'Select chat setup' })
+        vim.keymap.set('n', config.keymaps.selectChatSetup, ':MarkLLMSelectBufferSetup<CR>',
+            { desc = 'Select chat setup' })
     end
 
     if config.keymaps and config.keymaps.selectDefaultSetup then
-        vim.keymap.set('n', config.keymaps.selectDefaultSetup, ':MarkLLMSelectDefaultSetup<CR>', { desc = 'Select default setup' })
+        vim.keymap.set('n', config.keymaps.selectDefaultSetup, ':MarkLLMSelectDefaultSetup<CR>',
+            { desc = 'Select default setup' })
     end
 
     if config.keymaps and config.keymaps.actions then
         vim.keymap.set('v', config.keymaps.actions, ":'<,'>MarkLLMRunAction<CR>", { desc = 'Run action' })
+    end
+
+    if config.actions and #config.actions > 0 then
+        for _, action in ipairs(config.actions) do
+            if action.shortcut then
+                local desc = action.name and ('Run action: ' .. action.name) or 'Run action'
+                local quoted_name = action.name:gsub('"', '\\"')
+                local cmd = string.format(
+                    ":'<,'>MarkLLMRunAction %s<CR>",
+                    quoted_name
+                )
+                vim.keymap.set('v', action.shortcut, cmd, { desc = desc })
+            end
+        end
     end
 
     if config.keymaps and config.keymaps.saveChat then

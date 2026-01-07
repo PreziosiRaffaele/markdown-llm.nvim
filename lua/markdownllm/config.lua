@@ -119,4 +119,17 @@ function M.find_preset(name)
     return nil
 end
 
+---Find an action by name.
+---@param name string
+---@return table
+---@throws string
+function M.find_action(name)
+    for _, action in ipairs(M.config.actions or {}) do
+        if action.name == name then
+            return action
+        end
+    end
+    error('Action "' .. name .. '" not found in the configured actions.')
+end
+
 return M
