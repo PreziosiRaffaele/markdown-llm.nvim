@@ -41,8 +41,6 @@ The only optional suggestion is to use [render-markdown.nvim](https://github.com
         provider = "openai",
         model = "gpt-5.2",
         api_key_name = "OPENAI_API_KEY",
-        stream = true,
-        opts = {},
       },
     },
     presets = {
@@ -54,7 +52,6 @@ The only optional suggestion is to use [render-markdown.nvim](https://github.com
       sendChat = "<leader>ms",
       selectChatSetup = "<leader>mc",
       selectDefaultSetup = "<leader>md",
-      editChatSetup = "<leader>me",
       actions = "<leader>ma",
       saveChat = "<leader>mw",
       resumeChat = "<leader>mr",
@@ -77,8 +74,6 @@ require("markdownllm").setup({
       provider = "openai",
       model = "gpt-5.2",
       api_key_name = "OPENAI_API_KEY",
-      stream = true,
-      opts = {},
     },
   },
   presets = {
@@ -90,7 +85,6 @@ require("markdownllm").setup({
     sendChat = "<leader>ms",
     selectChatSetup = "<leader>mc",
     selectDefaultSetup = "<leader>md",
-    editChatSetup = "<leader>me",
     actions = "<leader>ma",
     saveChat = "<leader>mw",
     resumeChat = "<leader>mr",
@@ -105,7 +99,6 @@ require("markdownllm").setup({
 - `:MarkLLMRunAction` send the current visual selection using an action.
 - `:MarkLLMSelectBufferSetup` set the setup for the current buffer.
 - `:MarkLLMSelectDefaultSetup` set the default setup for new buffers.
-- `:MarkLLMEditChatSetup` edit the current chat setup in a floating window.
 - `:MarkLLMSaveChat` save the current chat buffer to disk.
 - `:MarkLLMResumeChat` resume a saved chat from disk.
 
@@ -123,9 +116,9 @@ Help docs are available in `doc/markdownllm.txt` after running `:helptags`.
   - `model` model id passed to the provider.
   - `api_key_name` environment variable containing the API key.
   - `base_url` optional override for OpenAI-compatible endpoints.
-  - `stream` enable streaming responses (default: `true`).
   - `timeout` optional request timeout in milliseconds.
-  - `opts` provider-specific options merged into payload.
+  - `temperature`, `max_tokens`, `top_p`, `stop`, `frequency_penalty`, `presence_penalty`, `seed` model parameters.
+  - `web_search` enable provider web search tool when supported.
 - `presets` list of prompt presets used to seed new chats:
   - `name` label shown in the preset selector.
   - `instruction` content injected under the `# System` section.
@@ -140,12 +133,25 @@ Help docs are available in `doc/markdownllm.txt` after running `:helptags`.
 - `keymaps` optional command bindings:
   - `newChat`
   - `sendChat`
-  - `selectBufferSetup`
+  - `selectChatSetup`
   - `selectDefaultSetup`
-  - `editChatSetup`
   - `actions`
   - `saveChat`
 - `resumeChat`
+
+## Chat YAML frontmatter
+
+Each chat buffer starts with YAML frontmatter that mirrors the setup. Edit it directly to change providers or model options:
+
+```yaml
+---
+provider: openai
+model: gpt-5.2
+api_key_name: OPENAI_API_KEY
+temperature: 0.2
+max_tokens: 800
+---
+```
 
 ## Configuration Examples
 
@@ -183,14 +189,7 @@ setups = {
     provider = "gemini",
     model = "gemini-2.5-pro",
     api_key_name = "GEMINI_API_KEY",
-    opts = {
-      tools = {
-        {
-          -- Enable Gemini web search tool by default
-          google_search = vim.empty_dict(),
-        },
-      },
-    },
+    web_search = true,
   },
 }
 ```

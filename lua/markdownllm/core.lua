@@ -87,6 +87,38 @@ local function cleanup_request_state(bufnr, loading_mark)
     buffer.toggle_sending_flag(bufnr)
 end
 
+---Extract provider options from a flattened setup table.
+---@param setup table|nil
+---@return table|nil
+local function extract_options_from_setup(setup)
+    if type(setup) ~= 'table' then
+        return nil
+    end
+
+    local options = {}
+
+    local function add_option(key, value)
+        if value ~= nil then
+            options[key] = value
+        end
+    end
+
+    add_option('temperature', setup.temperature)
+    add_option('max_tokens', setup.max_tokens)
+    add_option('top_p', setup.top_p)
+    add_option('stop', setup.stop)
+    add_option('frequency_penalty', setup.frequency_penalty)
+    add_option('presence_penalty', setup.presence_penalty)
+    add_option('seed', setup.seed)
+    add_option('web_search', setup.web_search)
+
+    if next(options) == nil then
+        return nil
+    end
+
+    return options
+end
+
 ---Build a provider-neutral request from setup and buffer messages.
 ---@param setup table
 ---@param system_text string
@@ -108,13 +140,13 @@ local function build_request(setup, system_text, messages)
         context = {
             provider = setup.provider,
             model = setup.model,
-            stream = setup.stream ~= false,
+            stream = true,
             timeout = setup.timeout,
             api_key_name = setup.api_key_name,
             base_url = setup.base_url,
         },
         messages = request_messages,
-        options = setup.opts or {},
+        options = extract_options_from_setup(setup),
     }
 end
 
@@ -122,19 +154,27 @@ end
 ---@param bufnr integer
 ---@return nil
 function M.send_request(bufnr)
-    local setup = vim.b[bufnr].markdownllm_setup
-
-    if not setup then
-        logger.error('No active MarkdownLLM setup found.')
-        return
-    end
-
     if vim.b[bufnr] and vim.b[bufnr].markdownllm_is_sending then
         logger.warn('A request is already in progress for this buffer.')
         return
     end
 
-    local system_text, messages = buffer.parse_buffer(bufnr)
+    local setup, system_text, messages = buffer.parse_buffer(bufnr)
+    local frontmatter_setup, frontmatter_err = buffer.parse_setup_from_buffer(bufnr)
+
+    if not setup then
+        local default_setup = config_mod.get_default_setup()
+        setup = vim.deepcopy(default_setup)
+        setup.name = nil
+        setup.opts = nil
+
+        if not frontmatter_setup and not frontmatter_err then
+            local _, update_err = buffer.update_setup_in_buffer(bufnr, setup)
+            if update_err then
+                logger.warn('Failed to seed YAML frontmatter: ' .. update_err)
+            end
+        end
+    end
 
     if #messages == 0 then
         logger.warn('No messages found in the chat buffer. Add a ## User section with content first.')
@@ -143,7 +183,7 @@ function M.send_request(bufnr)
 
     buffer.toggle_sending_flag(bufnr)
     local loading_line = buffer.append_loading_model_block(bufnr)
-    local loading_mark = buffer.set_loading_virtual_text(bufnr, loading_line, 'Loading...')
+    local loading_mark = buffer.set_loading_virtual_text(bufnr, loading_line, 'Thinking...')
 
     logger.info('Sending request to Provider: ' .. setup.provider .. ', Model:' .. setup.model)
 
@@ -199,17 +239,23 @@ function M.open_chat(preset)
     vim.bo[bufnr].swapfile = false
 
     local setup = config_mod.resolve_preset_setup_name(preset)
-
-    buffer.apply_setup_to_buffer(bufnr, setup)
+    local buffer_setup = vim.deepcopy(setup)
+    buffer_setup.name = nil
+    buffer_setup.opts = nil
 
     vim.api.nvim_buf_set_name(bufnr, buffer.next_chat_name())
 
     local existing_lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
     local has_content = #existing_lines > 1 or (#existing_lines == 1 and existing_lines[1] ~= '')
     if not has_content then
-        local template = buffer.chat_template(preset and preset.instruction)
+        local template = buffer.chat_template(preset and preset.instruction, buffer_setup)
         vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, template)
         vim.api.nvim_win_set_cursor(0, { #template, 0 })
+    else
+        local _, update_err = buffer.update_setup_in_buffer(bufnr, buffer_setup)
+        if update_err then
+            logger.warn('Failed to update YAML frontmatter: ' .. update_err)
+        end
     end
 
     return bufnr
@@ -290,12 +336,23 @@ function M.resume_saved_chat()
                 return
             end
 
-            local setup = config_mod.get_default_setup()
-
             vim.cmd('edit ' .. vim.fn.fnameescape(choice.path))
             local bufnr = vim.api.nvim_get_current_buf()
             vim.bo[bufnr].filetype = 'markdown'
-            buffer.apply_setup_to_buffer(bufnr, setup)
+            local setup, setup_err = buffer.parse_setup_from_buffer(bufnr)
+            if setup_err then
+                logger.warn('Invalid YAML frontmatter: ' .. setup_err)
+            end
+            if not setup then
+                local default_setup = config_mod.get_default_setup()
+                local buffer_setup = vim.deepcopy(default_setup)
+                buffer_setup.name = nil
+                buffer_setup.opts = nil
+                local _, update_err = buffer.update_setup_in_buffer(bufnr, buffer_setup)
+                if update_err then
+                    logger.warn('Failed to seed YAML frontmatter: ' .. update_err)
+                end
+            end
             logger.info('Resumed MarkdownLLM chat: ' .. choice.label)
         end)
     end)
@@ -345,7 +402,13 @@ function M.select_buffer_setup(bufnr)
         return
     end
     ui.select_setup(function(setup)
-        buffer.apply_setup_to_buffer(bufnr, setup)
+        local buffer_setup = vim.deepcopy(setup)
+        buffer_setup.name = nil
+        buffer_setup.opts = nil
+        local _, update_err = buffer.update_setup_in_buffer(bufnr, buffer_setup)
+        if update_err then
+            logger.warn('Failed to update YAML frontmatter: ' .. update_err)
+        end
         logger.info(
             string.format('MarkdownLLM buffer using setup "%s" (%s / %s)', setup.name, setup.provider, setup.model)
         )

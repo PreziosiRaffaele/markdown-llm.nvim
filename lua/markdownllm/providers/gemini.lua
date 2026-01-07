@@ -144,6 +144,12 @@ function M.new(setup)
 
         if type(options.tools) == 'table' and #options.tools > 0 then
             payload.tools = vim.deepcopy(options.tools)
+        elseif options.web_search == true then
+            payload.tools = {
+                {
+                    google_search = vim.empty_dict(),
+                },
+            }
         end
 
         local generation_config = build_generation_config(options)

@@ -16,11 +16,45 @@ local default_config = {
 
 M.config = vim.deepcopy(default_config)
 
+---Flatten legacy setup options into the top-level setup table.
+---@param setup table|nil
+---@return table|nil
+local function normalize_setup(setup)
+    if type(setup) ~= 'table' then
+        return setup
+    end
+
+    local normalized = vim.deepcopy(setup)
+    local opts = normalized.opts
+    if type(opts) == 'table' then
+        for key, value in pairs(opts) do
+            if normalized[key] == nil then
+                normalized[key] = value
+            end
+        end
+    end
+
+    normalized.opts = nil
+    return normalized
+end
+
+---Normalize all configured setups for consistent access.
+---@param setups table[]|nil
+---@return table[]
+local function normalize_setups(setups)
+    local normalized_setups = {}
+    for _, setup in ipairs(setups or {}) do
+        table.insert(normalized_setups, normalize_setup(setup))
+    end
+    return normalized_setups
+end
+
 ---Update the configuration state.
 ---@param opts table|nil
 ---@return nil
 function M.update(opts)
     M.config = vim.tbl_deep_extend('force', vim.deepcopy(default_config), opts or {})
+    M.config.setups = normalize_setups(M.config.setups)
 end
 
 ---Find a setup by name.
