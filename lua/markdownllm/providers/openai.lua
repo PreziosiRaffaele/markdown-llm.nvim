@@ -16,6 +16,15 @@ local DEFAULT_BASE_URLS = {
     deepseek = 'https://api.deepseek.com/v1/chat/completions',
 }
 
+local WEB_SEARCH_TOOLS = {
+    openai = {
+        { type = 'web_search' },
+    },
+    grok = {
+        { type = 'web_search' },
+    },
+}
+
 ---@param setup table
 ---@return string
 local function provider_label(setup)
@@ -65,8 +74,9 @@ end
 
 
 ---@param options table|nil
+---@param provider_name string|nil
 ---@return table
-local function normalize_options(options)
+local function normalize_options(options, provider_name)
     if type(options) ~= 'table' then
         return {}
     end
@@ -74,7 +84,12 @@ local function normalize_options(options)
     normalized.payload_overrides = nil
     if normalized.web_search ~= nil then
         if normalized.web_search == true and normalized.tools == nil then
-            logger.warn('web_search is not supported for OpenAI-compatible providers; ignoring.')
+            local web_search_tool = WEB_SEARCH_TOOLS[provider_name]
+            if web_search_tool then
+                normalized.tools = vim.deepcopy(web_search_tool)
+            else
+                logger.warn('web_search is not supported for OpenAI-compatible providers; ignoring.')
+            end
         end
         normalized.web_search = nil
     end
@@ -104,6 +119,7 @@ function M.new(setup)
         return nil, label .. ' API key not found. Set environment variable ' .. tostring(setup.api_key_name) .. '.'
     end
 
+    local provider_name = setup.provider_name
     local base_url = resolve_base_url(setup)
     local driver = {
         stream_format = 'sse',
@@ -121,7 +137,7 @@ function M.new(setup)
         }
 
         local options = request.options or {}
-        payload = vim.tbl_deep_extend('force', payload, normalize_options(options))
+        payload = vim.tbl_deep_extend('force', payload, normalize_options(options, provider_name))
         if type(options.payload_overrides) == 'table' then
             payload = vim.tbl_deep_extend('force', payload, options.payload_overrides)
         end
