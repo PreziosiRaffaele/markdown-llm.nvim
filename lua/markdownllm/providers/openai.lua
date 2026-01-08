@@ -88,7 +88,10 @@ local function normalize_options(options, provider_name)
             if web_search_tool then
                 normalized.tools = vim.deepcopy(web_search_tool)
             else
-                logger.warn('web_search is not supported for OpenAI-compatible providers; ignoring.')
+                logger.warn(string.format(
+                    'web_search is not supported for %s; ignoring.',
+                    provider_label({ provider_name = provider_name })
+                ))
             end
         end
         normalized.web_search = nil
