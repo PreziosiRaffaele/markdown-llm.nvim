@@ -7,6 +7,7 @@
 local M = {}
 
 local driver_factory = require('markdownllm.driver_factory')
+local logger = require('markdownllm.logger')
 
 ---@class markdownllm.LLMRequestContext
 ---@field provider string
@@ -58,6 +59,7 @@ end
 ---@param callbacks markdownllm.LLMCallbacks
 ---@return markdownllm.LLMAbortHandle|nil
 function M.send(request, callbacks)
+    logger.trace('LLM request:', request)
     local on_error = callback_or_noop(callbacks, 'on_error')
     local on_warning = callback_or_noop(callbacks, 'on_warning')
     local on_chunk = callback_or_noop(callbacks, 'on_chunk')
@@ -91,11 +93,14 @@ function M.send(request, callbacks)
         vim.list_extend(cmd, spec.args)
     end
 
+    logger.trace('LLM request body:', spec.body)
+
     local job_obj
     local buffer = ''
     local stderr_buffer = {}
     local aborted = false
     local stream_format = request.context.stream and (driver.stream_format or 'sse') or 'json'
+    local response_text = ''
 
     local function abort_with_error(err)
         if aborted then
@@ -131,6 +136,7 @@ function M.send(request, callbacks)
             return
         end
         if text and text ~= '' then
+            response_text = response_text .. text
             vim.schedule(function()
                 on_chunk(text)
             end)
@@ -195,6 +201,7 @@ function M.send(request, callbacks)
         end
 
         if not aborted then
+            logger.trace('LLM response:', response_text)
             vim.schedule(on_complete)
         end
     end)
