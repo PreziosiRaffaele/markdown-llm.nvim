@@ -8,16 +8,6 @@
 
 local M = {}
 
----@param text string
----@return boolean
----@return table|nil
-local function decode_json(text)
-    if vim.json and vim.json.decode then
-        return pcall(vim.json.decode, text)
-    end
-    return pcall(vim.fn.json_decode, text)
-end
-
 ---@param body table|nil
 ---@return string|nil
 local function extract_text(body)
@@ -191,7 +181,7 @@ function M.new(setup)
             if vim.startswith(line, 'data: ') then
                 saw_data = true
                 local json_str = line:sub(7)
-                local ok, body = decode_json(json_str)
+                local ok, body = pcall(vim.json.decode,json_str)
                 if not ok then
                     return nil, 'Gemini JSON decode error: ' .. json_str, 'warning'
                 end
@@ -213,7 +203,7 @@ function M.new(setup)
             return table.concat(chunks, '')
         end
 
-        local ok, body = decode_json(event)
+        local ok, body = pcall(vim.json.decode, event)
         if not ok then
             return nil, 'Gemini JSON decode error: ' .. event, 'fatal'
         end

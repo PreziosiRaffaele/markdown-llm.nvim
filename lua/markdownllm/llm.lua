@@ -64,7 +64,7 @@ function M.send(request, callbacks)
     local on_chunk = callback_or_noop(callbacks, 'on_chunk')
     local on_complete = callback_or_noop(callbacks, 'on_complete')
 
-    local driver, driver_err = driver_factory.get(request.context.provider, request.context)
+    local driver, driver_err = driver_factory.get(request.context)
     if not driver then
         on_error(driver_err or ('Provider not found: ' .. tostring(request.context.provider)))
         return nil

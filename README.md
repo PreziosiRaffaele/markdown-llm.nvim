@@ -19,6 +19,7 @@ https://github.com/user-attachments/assets/5d08506d-e3eb-4a7f-a7aa-117bee2a055f
 
 MarkdownLLM is lightweight completely written in Lua. 
 It has no dependencies on other plugins.
+Requires Neovim >= 0.10.
 The only optional suggestion is to use [render-markdown.nvim](https://github.com/MeanderingProgrammer/render-markdown.nvim) to render markdown in the chat buffer.
 
 ### lazy.nvim

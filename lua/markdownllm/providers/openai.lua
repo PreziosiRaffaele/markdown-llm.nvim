@@ -16,28 +16,6 @@ local DEFAULT_BASE_URLS = {
     deepseek = 'https://api.deepseek.com/v1/chat/completions',
 }
 
----@param setup table
----@return string
-local function provider_label(setup)
-    if setup and setup.provider_label and setup.provider_label ~= '' then
-        return setup.provider_label
-    end
-    if setup and setup.provider_name and setup.provider_name ~= '' then
-        return setup.provider_name
-    end
-    return 'OpenAI-compatible'
-end
-
----@param text string
----@return boolean
----@return table|nil
-local function decode_json(text)
-    if vim.json and vim.json.decode then
-        return pcall(vim.json.decode, text)
-    end
-    return pcall(vim.fn.json_decode, text)
-end
-
 ---@param body table|nil
 ---@return string|nil
 local function extract_text(body)
@@ -98,7 +76,7 @@ end
 ---@return table|nil
 ---@return string|nil
 function M.new(setup)
-    local label = provider_label(setup or {})
+    local label = setup.provider
     local api_key = os.getenv(setup.api_key_name or '')
     if not api_key or api_key == '' then
         return nil, label .. ' API key not found. Set environment variable ' .. tostring(setup.api_key_name) .. '.'
@@ -153,7 +131,7 @@ function M.new(setup)
                     return nil
                 end
 
-                local ok, body = decode_json(json_str)
+                local ok, body = pcall(vim.json.decode,json_str)
                 if not ok then
                     return nil, label .. ' JSON decode error: ' .. json_str, 'warning'
                 end
@@ -175,7 +153,7 @@ function M.new(setup)
             return table.concat(chunks, '')
         end
 
-        local ok, body = decode_json(event)
+        local ok, body = pcall(vim.json.decode, event)
         if not ok then
             return nil, label .. ' JSON decode error: ' .. event, 'fatal'
         end
