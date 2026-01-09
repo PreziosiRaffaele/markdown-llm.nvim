@@ -491,6 +491,8 @@ function M.run_action(action)
                         range.end_col,
                         replacement
                     )
+                    local preview = util.truncate_text(response_text:gsub('\n', '\\n'), 80)
+                    logger.info('Replaced with:', preview)
                 end,
                 on_error = function(msg)
                     clear_action_mark(bufnr, mark_id)

@@ -68,4 +68,24 @@ function M.get_visual_selection_text()
     return table.concat(text, '\n'), range
 end
 
+---Truncate text for compact display.
+---@param text string
+---@param max_len integer
+---@return string
+function M.truncate_text(text, max_len)
+    if max_len <= 0 then
+        return ''
+    end
+
+    if #text <= max_len then
+        return text
+    end
+
+    if max_len <= 3 then
+        return string.rep('.', max_len)
+    end
+
+    return text:sub(1, max_len - 3) .. '...'
+end
+
 return M
