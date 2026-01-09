@@ -18,7 +18,8 @@ local providers = {
 --- @tparam table setup Provider setup/config context.
 --- @treturn table|nil driver Driver module exposing `spec(...)` and `parse(...)`.
 --- @treturn string|nil error
-function M.get(provider_name, setup)
+function M.get(setup)
+    local provider_name = setup.provider
     local implementation = providers[provider_name]
     if not implementation then
         return nil, 'Provider ' .. tostring(provider_name) .. ' is not supported.'
