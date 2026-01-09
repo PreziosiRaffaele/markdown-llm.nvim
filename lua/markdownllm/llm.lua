@@ -77,6 +77,8 @@ function M.send(request, callbacks)
         return nil
     end
 
+    logger.trace('LLM request url:', spec.url)
+
     local cmd = { 'curl', '--silent', '--no-buffer', '-X', 'POST', spec.url }
     if request.context.timeout then
         local timeout_s = math.max(1, math.floor(request.context.timeout / 1000))
