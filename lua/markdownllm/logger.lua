@@ -50,18 +50,26 @@ local function log(level, msg_parts)
     local msg_str = format_message(msg_parts)
     local final_msg = string.format('[%s] %s', level_name, msg_str)
 
-    if config.log_to_notify then
-        vim.notify(final_msg, level)
+    local function emit()
+        if config.log_to_notify then
+            vim.notify(final_msg, level)
+        end
+
+        if config.log_to_file then
+            local file = io.open(config.log_file_path, 'a')
+            if file then
+                file:write(os.date('%Y-%m-%d %H:%M:%S') .. ' ' .. final_msg .. '\n')
+                file:close()
+            else
+                vim.notify('Error: Could not open log file: ' .. config.log_file_path, vim.log.levels.ERROR)
+            end
+        end
     end
 
-    if config.log_to_file then
-        local file = io.open(config.log_file_path, 'a')
-        if file then
-            file:write(os.date('%Y-%m-%d %H:%M:%S') .. ' ' .. final_msg .. '\n')
-            file:close()
-        else
-            vim.notify('Error: Could not open log file: ' .. config.log_file_path, vim.log.levels.ERROR)
-        end
+    if vim.in_fast_event() then
+        vim.schedule(emit)
+    else
+        emit()
     end
 end
 
