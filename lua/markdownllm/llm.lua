@@ -102,7 +102,8 @@ function M.send(request, callbacks)
     local stderr_buffer = {}
     local aborted = false
     local stream_format = request.context.stream and (driver.stream_format or 'sse') or 'json'
-    local response_text = ''
+    local capture_response = logger.is_enabled(vim.log.levels.TRACE)
+    local response_chunks = capture_response and {} or nil
 
     local function abort_with_error(err)
         if aborted then
@@ -138,7 +139,9 @@ function M.send(request, callbacks)
             return
         end
         if text and text ~= '' then
-            response_text = response_text .. text
+            if response_chunks then
+                table.insert(response_chunks, text)
+            end
             vim.schedule(function()
                 on_chunk(text)
             end)
@@ -203,7 +206,9 @@ function M.send(request, callbacks)
         end
 
         if not aborted then
-            logger.trace('LLM response:', response_text)
+            if response_chunks then
+                logger.trace('LLM response:', table.concat(response_chunks))
+            end
             vim.schedule(on_complete)
         end
     end)

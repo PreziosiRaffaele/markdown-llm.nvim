@@ -65,6 +65,12 @@ local function log(level, msg_parts)
     end
 end
 
+---@param level integer
+---@return boolean
+function M.is_enabled(level)
+    return level >= config.level
+end
+
 function M.trace(...)
     log(vim.log.levels.TRACE, { ... })
 end
