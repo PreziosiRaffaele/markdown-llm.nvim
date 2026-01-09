@@ -11,6 +11,7 @@ normal buffers rather than an opaque agent workflow.
 Installation                                                   *markdownllm-install*
 
 Use your plugin manager and load the module in your config:
+Requires Neovim >= 0.10.
 >
   require("markdownllm").setup({
     log_level = vim.log.levels.INFO,
