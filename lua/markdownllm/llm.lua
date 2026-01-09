@@ -7,6 +7,7 @@
 local M = {}
 
 local driver_factory = require('markdownllm.driver_factory')
+local logger = require('markdownllm.logger')
 
 ---@class markdownllm.LLMRequestContext
 ---@field provider string
@@ -74,6 +75,10 @@ function M.send(request, callbacks)
         on_error(spec_err or 'Provider spec error.')
         return nil
     end
+
+    logger.debug('LLM request:', request)
+    logger.trace('LLM request url:', spec.url)
+    logger.trace('LLM request body:', spec.body)
 
     local cmd = { 'curl', '--silent', '--no-buffer', '-X', 'POST', spec.url }
     if request.context.timeout then
@@ -161,6 +166,7 @@ function M.send(request, callbacks)
             if aborted or not data then
                 return
             end
+            logger.trace(data)
             buffer = buffer .. data
             process_buffer()
         end,
