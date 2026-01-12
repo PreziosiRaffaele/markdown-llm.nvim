@@ -10,21 +10,31 @@ local driver_factory = require('markdownllm.driver_factory')
 local logger = require('markdownllm.logger')
 
 ---@class markdownllm.LLMRequestContext
----@field provider string
----@field model string
----@field stream boolean
----@field timeout integer|nil
----@field api_key_name string|nil
----@field base_url string|nil
+---@field provider string LLM provider key (resolved by driver_factory).
+---@field model string Provider model id.
+---@field stream boolean Stream responses when true.
+---@field timeout integer|nil Request timeout in milliseconds.
+---@field api_key_name string|nil Env var name for the provider API key.
+---@field base_url string|nil Override base URL for OpenAI-compatible drivers.
 
 ---@class markdownllm.LLMRequestMessage
----@field role string
+---@field role string 'system'|'user'|'assistant'.
 ---@field content string
+
+---@class markdownllm.LLMRequestOptions
+---@field temperature number|nil Sampling temperature.
+---@field max_tokens integer|nil Max output tokens.
+---@field top_p number|nil Nucleus sampling.
+---@field stop string[]|nil Stop sequences.
+---@field frequency_penalty number|nil Penalize repeated tokens.
+---@field presence_penalty number|nil Penalize topic repetition.
+---@field seed integer|nil Deterministic seed (if provider supports it).
+---@field web_search boolean|nil Enable web search tool (if provider support it).
 
 ---@class markdownllm.LLMRequest
 ---@field context markdownllm.LLMRequestContext
 ---@field messages markdownllm.LLMRequestMessage[]
----@field options table|nil
+---@field options markdownllm.LLMRequestOptions|table|nil
 
 ---@class markdownllm.LLMCallbacks
 ---@field on_error fun(err:string)
