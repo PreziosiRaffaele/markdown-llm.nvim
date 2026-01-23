@@ -57,9 +57,6 @@ local function build_generation_config(options)
     end
 
     local config = {}
-    if type(options.generation_config) == 'table' then
-        config = vim.deepcopy(options.generation_config)
-    end
 
     if options.temperature ~= nil and config.temperature == nil then
         config.temperature = options.temperature
@@ -132,9 +129,7 @@ function M.new(setup)
             })
         end
 
-        if type(options.tools) == 'table' and #options.tools > 0 then
-            payload.tools = vim.deepcopy(options.tools)
-        elseif options.web_search == true then
+        if options.web_search == true then
             payload.tools = {
                 {
                     google_search = vim.empty_dict(),
@@ -145,10 +140,6 @@ function M.new(setup)
         local generation_config = build_generation_config(options)
         if generation_config then
             payload.generationConfig = generation_config
-        end
-
-        if type(options.payload_overrides) == 'table' then
-            payload = vim.tbl_deep_extend('force', payload, options.payload_overrides)
         end
 
         local action = request.context.stream and 'streamGenerateContent?alt=sse' or 'generateContent'

@@ -100,9 +100,6 @@ function M.new(setup)
 
         local options = request.options or {}
         payload = vim.tbl_deep_extend('force', payload, normalize_options(options))
-        if type(options.payload_overrides) == 'table' then
-            payload = vim.tbl_deep_extend('force', payload, options.payload_overrides)
-        end
 
         return {
             url = base_url,

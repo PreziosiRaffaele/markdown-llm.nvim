@@ -27,7 +27,9 @@ llm.lua defines a clear interface for the request. The request is provider agnos
 | **`provider`** | `string` | The identifier for the service to use (e.g., `"openai"`, `"deepseek"`, `"gemini"`).| 
 | **`model`** | `string` | The specific model ID to target (e.g., `"gpt-4-turbo"`, `"claude-3-opus-20240229"`). |
 | **`stream`** | `boolean` | If `true`, the engine expects SSE and calls `callbacks.on_chunk` incrementally. |
-| **`timeout`** | `integer` | *(Optional)* The timeout in milliseconds for the request connection/read. |
+| **`timeout`** | `integer` | *(Optional)* Timeout in milliseconds for the request connection/read. |
+| **`api_key_name`** | `string` | *(Optional)* Env var name to resolve the API key inside the driver. |
+| **`base_url`** | `string` | *(Optional)* Override for OpenAI-compatible endpoints. |
 
 #### 2. Messages (`request.messages`)
 *The core payload representing the conversation history. This follows the standard chat-completion format.*
@@ -41,7 +43,7 @@ Array of message objects, where each object contains:
 
 
 #### 3. Options (`request.options`)
-*Standardized hyperparameters supported by the majority of LLM providers. The Driver is responsible for mapping these standard keys to the specific API field names (e.g., mapping `max_tokens` to `max_completion_tokens`).*
+*Standardized hyperparameters supported by the majority of LLM providers. The driver maps these to provider-specific payload fields.*
 
 | Property | Type | Description |
 | :--- | :--- | :--- |
@@ -52,7 +54,7 @@ Array of message objects, where each object contains:
 | **`frequency_penalty`** | `float` | Penalizes new tokens based on their existing frequency in the text so far (typically -2.0 to 2.0). |
 | **`presence_penalty`** | `float` | Penalizes new tokens based on whether they appear in the text so far (typically -2.0 to 2.0). |
 | **`seed`** | `integer` | If specified, the system will make a best effort to sample deterministically. |
-| **`tools`** | `table` | A list of tool definitions (function calling schemas) available to the model. |
+| **`web_search`** | `boolean` | When `true`, Gemini enables Google Search as a tool; OpenAI-compatible drivers ignore it with a warning. |
 
 
 ### Example Non-Streaming Request 
