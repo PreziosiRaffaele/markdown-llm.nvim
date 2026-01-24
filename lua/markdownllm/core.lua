@@ -111,6 +111,7 @@ local function extract_options_from_setup(setup)
     add_option('frequency_penalty', setup.frequency_penalty)
     add_option('presence_penalty', setup.presence_penalty)
     add_option('seed', setup.seed)
+    add_option('reasoning_effort', setup.reasoning_effort)
     add_option('web_search', setup.web_search)
 
     if next(options) == nil then

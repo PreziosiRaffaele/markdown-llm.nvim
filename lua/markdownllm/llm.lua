@@ -10,31 +10,32 @@ local driver_factory = require('markdownllm.driver_factory')
 local logger = require('markdownllm.logger')
 
 ---@class markdownllm.LLMRequestContext
----@field provider string LLM provider key (resolved by driver_factory).
----@field model string Provider model id.
----@field stream boolean Stream responses when true.
----@field timeout integer|nil Request timeout in milliseconds.
----@field api_key_name string|nil Env var name for the provider API key.
----@field base_url string|nil Override base URL for OpenAI-compatible drivers.
+---@field provider string Provider key resolved by driver_factory (e.g. `openai`, `deepseek`, `gemini`, `grok`).
+---@field model string Provider model id. Gemini uses this in the URL path; OpenAI/Grok use it in the payload.
+---@field stream boolean When true, request streaming and parse SSE; when false, expect a single JSON response.
+---@field timeout integer|nil Request timeout in milliseconds (mapped to curl --max-time, seconds, min 1).
+---@field api_key_name string|nil Env var name containing the provider API key (required by all current drivers).
+---@field base_url string|nil Override base URL for OpenAI-compatible drivers; ignored by Gemini/Grok.
 
 ---@class markdownllm.LLMRequestMessage
----@field role string 'system'|'user'|'assistant'.
----@field content string
+---@field role string 'system'|'user'|'assistant'. Gemini consumes only the first system message as a system instruction.
+---@field content string Plain text content (text-only payloads in current drivers).
 
 ---@class markdownllm.LLMRequestOptions
----@field temperature number|nil Sampling temperature.
----@field max_tokens integer|nil Max output tokens.
----@field top_p number|nil Nucleus sampling.
----@field stop string[]|nil Stop sequences.
----@field frequency_penalty number|nil Penalize repeated tokens.
----@field presence_penalty number|nil Penalize topic repetition.
----@field seed integer|nil Deterministic seed (if provider supports it).
----@field web_search boolean|nil Enable web search tool (if provider support it).
+---@field temperature number|nil Sampling temperature (OpenAI/Gemini/Grok).
+---@field max_tokens integer|nil Max output tokens (OpenAI/Gemini; Grok maps to max_output_tokens).
+---@field top_p number|nil Nucleus sampling (OpenAI/Gemini/Grok).
+---@field stop string[]|nil Stop sequences (OpenAI/Gemini; ignored by Grok).
+---@field frequency_penalty number|nil Penalize repeated tokens (OpenAI/Gemini).
+---@field presence_penalty number|nil Penalize topic repetition (OpenAI/Gemini).
+---@field seed integer|nil Deterministic seed (OpenAI/Gemini).
+---@field reasoning_effort string|nil Reasoning effort hint (OpenAI-compatible).
+---@field web_search boolean|nil Convenience toggle: Gemini -> google_search tool; Grok -> web_search tool; OpenAI-compatible ignores.
 
 ---@class markdownllm.LLMRequest
 ---@field context markdownllm.LLMRequestContext
 ---@field messages markdownllm.LLMRequestMessage[]
----@field options markdownllm.LLMRequestOptions|table|nil
+---@field options markdownllm.LLMRequestOptions|table|nil Provider options (unknown keys may be ignored by drivers).
 
 ---@class markdownllm.LLMCallbacks
 ---@field on_error fun(err:string)
