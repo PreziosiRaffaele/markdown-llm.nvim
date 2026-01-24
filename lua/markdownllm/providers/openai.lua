@@ -49,9 +49,8 @@ local function normalize_options(options)
         return {}
     end
     local normalized = vim.deepcopy(options)
-    normalized.payload_overrides = nil
     if normalized.web_search ~= nil then
-        if normalized.web_search == true and normalized.tools == nil then
+        if normalized.web_search == true then
             logger.warn('web_search is not supported for OpenAI-compatible providers; ignoring.')
         end
         normalized.web_search = nil

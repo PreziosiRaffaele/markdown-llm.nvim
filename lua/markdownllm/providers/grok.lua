@@ -90,29 +90,19 @@ function M.new(setup)
         if options.temperature ~= nil then
             payload.temperature = options.temperature
         end
+
         if options.top_p ~= nil then
             payload.top_p = options.top_p
         end
-        if options.max_output_tokens ~= nil then
-            payload.max_output_tokens = options.max_output_tokens
-        elseif options.max_tokens ~= nil then
+
+        if options.max_tokens ~= nil then
             payload.max_output_tokens = options.max_tokens
         end
 
-        if type(options.tools) == 'table' and #options.tools > 0 then
-            payload.tools = vim.deepcopy(options.tools)
-        elseif options.web_search == true then
+        if options.web_search == true then
             payload.tools = {
                 { type = 'web_search' },
             }
-        end
-
-        if options.store ~= nil then
-            payload.store = options.store
-        end
-
-        if type(options.payload_overrides) == 'table' then
-            payload = vim.tbl_deep_extend('force', payload, options.payload_overrides)
         end
 
         return {
