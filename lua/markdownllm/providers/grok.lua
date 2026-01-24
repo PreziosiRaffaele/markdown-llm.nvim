@@ -105,6 +105,12 @@ function M.new(setup)
             }
         end
 
+        if options.reasoning_effort ~= nil then
+            payload.reasoning = {
+                effort = options.reasoning_effort
+            }
+        end
+
         return {
             url = base_url,
             headers = {

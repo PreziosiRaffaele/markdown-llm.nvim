@@ -58,26 +58,31 @@ local function build_generation_config(options)
 
     local config = {}
 
-    if options.temperature ~= nil and config.temperature == nil then
+    if options.temperature ~= nil then
         config.temperature = options.temperature
     end
-    if options.top_p ~= nil and config.topP == nil then
+    if options.top_p ~= nil then
         config.topP = options.top_p
     end
-    if options.max_tokens ~= nil and config.maxOutputTokens == nil then
+    if options.max_tokens ~= nil then
         config.maxOutputTokens = options.max_tokens
     end
-    if options.stop ~= nil and config.stopSequences == nil then
+    if options.stop ~= nil then
         config.stopSequences = options.stop
     end
-    if options.frequency_penalty ~= nil and config.frequencyPenalty == nil then
+    if options.frequency_penalty ~= nil then
         config.frequencyPenalty = options.frequency_penalty
     end
-    if options.presence_penalty ~= nil and config.presencePenalty == nil then
+    if options.presence_penalty ~= nil then
         config.presencePenalty = options.presence_penalty
     end
-    if options.seed ~= nil and config.seed == nil then
+    if options.seed ~= nil then
         config.seed = options.seed
+    end
+    if options.reasoning_effort ~= nil then
+        config.thinkingConfig = {
+            thinkingLevel = options.reasoning_effort
+        }
     end
 
     if next(config) == nil then
@@ -172,7 +177,7 @@ function M.new(setup)
             if vim.startswith(line, 'data: ') then
                 saw_data = true
                 local json_str = line:sub(7)
-                local ok, body = pcall(vim.json.decode,json_str)
+                local ok, body = pcall(vim.json.decode, json_str)
                 if not ok then
                     return nil, 'Gemini JSON decode error: ' .. json_str, 'warning'
                 end

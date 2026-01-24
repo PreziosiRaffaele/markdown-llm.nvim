@@ -97,6 +97,7 @@ setups
       frequency_penalty (number|nil) frequency penalty.
       presence_penalty  (number|nil) presence penalty.
       seed          (number|nil) sampling seed.
+      reasoning_effort (string|nil) reasoning effort hint (OpenAI-compatible).
       web_search    (boolean|nil) enable provider web search tool when supported.
 
 presets
@@ -145,6 +146,7 @@ frontmatter directly to change providers or model options:
   api_key_name: OPENAI_API_KEY
   temperature: 0.2
   max_tokens: 800
+  reasoning_effort: medium
   ---
 <
 

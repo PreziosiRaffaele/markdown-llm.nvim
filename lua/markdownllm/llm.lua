@@ -29,6 +29,7 @@ local logger = require('markdownllm.logger')
 ---@field frequency_penalty number|nil Penalize repeated tokens (OpenAI/Gemini).
 ---@field presence_penalty number|nil Penalize topic repetition (OpenAI/Gemini).
 ---@field seed integer|nil Deterministic seed (OpenAI/Gemini).
+---@field reasoning_effort string|nil Reasoning effort hint (OpenAI-compatible).
 ---@field web_search boolean|nil Convenience toggle: Gemini -> google_search tool; Grok -> web_search tool; OpenAI-compatible ignores.
 
 ---@class markdownllm.LLMRequest

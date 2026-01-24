@@ -21,6 +21,7 @@ local setup_field_order = {
     'frequency_penalty',
     'presence_penalty',
     'seed',
+    'reasoning_effort',
     'web_search',
 }
 
@@ -379,6 +380,7 @@ function M.serialize_setup_to_yaml(setup)
     add_field('frequency_penalty', setup.frequency_penalty, false)
     add_field('presence_penalty', setup.presence_penalty, false)
     add_field('seed', setup.seed, false)
+    add_field('reasoning_effort', setup.reasoning_effort, false)
     if setup.web_search == true then
         add_field('web_search', true, false)
     end

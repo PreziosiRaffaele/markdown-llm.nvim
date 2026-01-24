@@ -118,7 +118,7 @@ Help docs are available in `doc/markdownllm.txt` after running `:helptags`.
   - `api_key_name` environment variable containing the API key.
   - `base_url` optional override for OpenAI-compatible endpoints.
   - `timeout` optional request timeout in milliseconds.
-  - `temperature`, `max_tokens`, `top_p`, `stop`, `frequency_penalty`, `presence_penalty`, `seed` model parameters.
+  - `temperature`, `max_tokens`, `top_p`, `stop`, `frequency_penalty`, `presence_penalty`, `seed`, `reasoning_effort` model parameters.
   - `web_search` enable provider web search tool when supported.
 - `presets` list of prompt presets used to seed new chats:
   - `name` label shown in the preset selector.
@@ -151,6 +151,7 @@ model: gpt-5.2
 api_key_name: OPENAI_API_KEY
 temperature: 0.2
 max_tokens: 800
+reasoning_effort: medium
 ---
 ```
 
