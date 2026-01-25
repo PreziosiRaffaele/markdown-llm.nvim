@@ -9,7 +9,7 @@ Unlike agent-based systems, interacting with an LLM through its native web inter
 
 By bringing LLM chat into Neovim's native markdown environment, this plugin allows you to have the same critical and iterative dialogue you would have in a web interface, but with the full power of Vim's editing capabilities. 
 
-You can easily add, remove, or modify any part of the conversation. Change system instructions or tweak model parameters on the fly, all with the efficiency of Vim motions!
+You can easily add, remove, or modify any part of the conversation, giving you **full control over the context**. Change system instructions or tweak model parameters on the fly, all with the efficiency of Vim motions!
 
 ## Demo
 <!-- Demo source: https://github.com/user-attachments/assets/5d08506d-e3eb-4a7f-a7aa-117bee2a055f -->
@@ -151,7 +151,7 @@ model: gpt-5.2
 api_key_name: OPENAI_API_KEY
 temperature: 0.2
 max_tokens: 800
-reasoning_effort: medium
+reasoning_effort: xhigh
 ---
 ```
 
@@ -166,6 +166,7 @@ setups = {
     provider = "openai",
     model = "gpt-5.2",
     api_key_name = "OPENAI_API_KEY",
+    reasoning_effort = "xhigh"
   },
   {
     name = "Gemini-2.5-flash",
