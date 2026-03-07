@@ -349,7 +349,7 @@ function M.save_current_buffer()
         return
     end
 
-    local input_name = vim.fn.input('Chat name: ')
+    local input_name = vim.fn.input('Chat name > ')
     local filename = fs.sanitize_chat_filename(input_name)
     if not filename then
         logger.info('Chat save cancelled.')
@@ -397,7 +397,7 @@ function M.resume_saved_chat()
     end
 
     vim.ui.select(items, {
-        prompt = 'Select MarkdownLLM chat to resume',
+        prompt = 'Select MarkdownLLM chat to resume > ',
         format_item = function(item)
             return item.label
         end,

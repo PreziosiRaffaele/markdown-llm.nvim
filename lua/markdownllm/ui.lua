@@ -18,7 +18,7 @@ function M.select_preset(on_select)
     end
 
     vim.ui.select(presets, {
-        prompt = 'Select prompt preset',
+        prompt = 'Select prompt preset > ',
         format_item = function(item)
             local ok, setup = pcall(config_mod.resolve_preset_setup_name, item)
             if ok then
@@ -48,7 +48,7 @@ function M.select_action(on_select)
     end
 
     vim.ui.select(actions, {
-        prompt = 'Select MarkdownLLM action',
+        prompt = 'Select MarkdownLLM action > ',
         format_item = function(item)
             local label = item.name or '(unnamed action)'
             if item.preset then
@@ -74,7 +74,7 @@ function M.select_setup(on_select)
         return
     end
 
-    vim.ui.select(names, { prompt = 'Select MarkdownLLM setup' }, function(choice)
+    vim.ui.select(names, { prompt = 'Select MarkdownLLM setup > ' }, function(choice)
         util.safe_call(function()
             if choice then
                 local setup = config_mod.find_setup(choice)
