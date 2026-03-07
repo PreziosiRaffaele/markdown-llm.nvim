@@ -29,7 +29,7 @@ llm.lua defines a clear interface for the request. The request is provider agnos
 | **`stream`** | `boolean` | If `true`, the engine expects SSE and calls `callbacks.on_chunk` incrementally. |
 | **`timeout`** | `integer` | *(Optional)* Timeout in milliseconds for the request connection/read. |
 | **`api_key_name`** | `string` | *(Optional)* Env var name to resolve the API key inside the driver. |
-| **`base_url`** | `string` | *(Optional)* Override for OpenAI-compatible endpoints. |
+| **`base_url`** | `string` | *(Optional)* Override for the selected provider endpoint. |
 
 #### 2. Messages (`request.messages`)
 *The core payload representing the conversation history. This follows the standard chat-completion format.*
@@ -54,7 +54,7 @@ Array of message objects, where each object contains:
 | **`frequency_penalty`** | `float` | Penalizes new tokens based on their existing frequency in the text so far (typically -2.0 to 2.0). |
 | **`presence_penalty`** | `float` | Penalizes new tokens based on whether they appear in the text so far (typically -2.0 to 2.0). |
 | **`seed`** | `integer` | If specified, the system will make a best effort to sample deterministically. |
-| **`web_search`** | `boolean` | When `true`, Gemini enables Google Search as a tool; OpenAI-compatible drivers ignore it with a warning. |
+| **`web_search`** | `boolean` | When `true`, OpenAI enables `web_search_preview`, Gemini enables Google Search, Grok enables `web_search`, and DeepSeek ignores it with a warning. |
 
 
 ### Example Non-Streaming Request 

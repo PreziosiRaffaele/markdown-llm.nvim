@@ -7,6 +7,7 @@
 ---@module 'markdownllm.providers.gemini'
 
 local M = {}
+local provider_util = require('markdownllm.providers.util')
 
 ---@param body table|nil
 ---@return string|nil
@@ -181,8 +182,9 @@ function M.new(setup)
                 if not ok then
                     return nil, 'Gemini JSON decode error: ' .. json_str, 'warning'
                 end
-                if body and body.error then
-                    return nil, 'Gemini API error: ' .. (body.error.message or 'Unknown'), 'fatal'
+                local api_error = provider_util.extract_api_error(body)
+                if api_error then
+                    return nil, 'Gemini API error: ' .. api_error, 'fatal'
                 end
 
                 local text_chunk = extract_text(body)
@@ -203,8 +205,9 @@ function M.new(setup)
         if not ok then
             return nil, 'Gemini JSON decode error: ' .. event, 'fatal'
         end
-        if body and body.error then
-            return nil, 'Gemini API error: ' .. (body.error.message or 'Unknown'), 'fatal'
+        local api_error = provider_util.extract_api_error(body)
+        if api_error then
+            return nil, 'Gemini API error: ' .. api_error, 'fatal'
         end
 
         return extract_text(body)

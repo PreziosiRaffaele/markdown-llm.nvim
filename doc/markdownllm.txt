@@ -88,7 +88,7 @@ setups
       provider      (string) provider name: "openai", "gemini", "grok", "deepseek".
       model         (string) model id passed to the provider.
       api_key_name  (string) environment variable containing the API key.
-      base_url      (string|nil) optional override for OpenAI-compatible endpoints.
+      base_url      (string|nil) optional override for the selected provider endpoint.
       timeout       (number|nil) optional request timeout in milliseconds.
       temperature   (number|nil) model temperature.
       max_tokens    (number|nil) model max tokens.
@@ -97,8 +97,11 @@ setups
       frequency_penalty (number|nil) frequency penalty.
       presence_penalty  (number|nil) presence penalty.
       seed          (number|nil) sampling seed.
-      reasoning_effort (string|nil) reasoning effort hint (OpenAI-compatible).
+      reasoning_effort (string|nil) reasoning effort hint (OpenAI, Grok, DeepSeek).
       web_search    (boolean|nil) enable provider web search tool when supported.
+      OpenAI uses the Responses API: max_tokens maps to max_output_tokens;
+                   stop, frequency_penalty, presence_penalty, and seed are
+                   currently ignored with a warning.
 
 presets
     List of prompt presets used to seed new chats. Each preset is a table with:
@@ -154,7 +157,9 @@ frontmatter directly to change providers or model options:
 Providers                                                  *markdownllm-providers*
 
 The following providers are currently supported:
-  OpenAI-compatible (OpenAI, xAI, DeepSeek)
+  OpenAI (Responses API)
+  xAI (Responses API)
+  DeepSeek (chat-completions-compatible)
   Google (Gemini)
 
 Other providers can be added per request. Raise an issue or PR to add a new provider.
@@ -204,7 +209,9 @@ Usage:
 
 `request.context` carries provider/model selection, API key name, optional
 base_url/timeout, and a `stream` flag. `messages` is the standard list of
-role/content pairs. `options` is passed through to the provider driver.
+role/content pairs; drivers may translate it to provider-specific payload
+shapes such as Responses `instructions` + `input`. `options` is passed through
+to the provider driver.
 
 ==============================================================================
 Notes                                                        *markdownllm-notes*

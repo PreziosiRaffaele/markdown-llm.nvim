@@ -7,6 +7,7 @@
 ---@module 'markdownllm.providers.grok'
 
 local M = {}
+local responses = require('markdownllm.providers.responses')
 
 local DEFAULT_BASE_URL = 'https://api.x.ai/v1/responses'
 
@@ -32,30 +33,14 @@ local function normalize_options(options)
     return vim.deepcopy(options)
 end
 
+---@param event_type string|nil
 ---@param body table|nil
 ---@return string|nil
-local function extract_output_text(body)
-    local output = body and body.output
-    if type(output) ~= 'table' then
-        return nil
+local function event_to_text(event_type, body)
+    if event_type == 'response.output_text.delta' then
+        return body and body.delta or nil
     end
-
-    local fragments = {}
-    for _, item in ipairs(output) do
-        if type(item.content) == 'table' then
-            for _, part in ipairs(item.content) do
-                if part.type == 'output_text' and part.text then
-                    table.insert(fragments, part.text)
-                end
-            end
-        end
-    end
-
-    if #fragments == 0 then
-        return nil
-    end
-
-    return table.concat(fragments, '')
+    return nil
 end
 
 ---@param setup table
@@ -127,60 +112,10 @@ function M.new(setup)
     ---@return string|nil
     ---@return string|nil
     function driver.parse(event)
-        local chunks = {}
-        local saw_data = false
-        local event_name = nil
-
-        for line in event:gmatch('[^\r\n]+') do
-            if vim.startswith(line, 'event:') then
-                event_name = vim.trim(line:sub(7))
-            elseif vim.startswith(line, 'data: ') then
-                saw_data = true
-                local json_str = line:sub(7)
-                if json_str == '[DONE]' then
-                    return nil
-                end
-
-                local ok, body = pcall(vim.json.decode, json_str)
-                if not ok then
-                    return nil, label .. ' JSON decode error: ' .. json_str, 'warning'
-                end
-                if body and body.error then
-                    return nil, label .. ' API error: ' .. (body.error.message or vim.inspect(body.error)), 'fatal'
-                end
-
-                local event_type = body and body.type or event_name
-                local text_chunk = nil
-                if event_type == 'response.output_text.delta' then
-                    text_chunk = body.delta
-                elseif event_type == 'response.output_text.done' then
-                    text_chunk = nil
-                elseif event_type == 'response.completed' then
-                    text_chunk = nil
-                end
-
-                if text_chunk and text_chunk ~= '' then
-                    table.insert(chunks, text_chunk)
-                end
-            end
-        end
-
-        if saw_data then
-            if #chunks == 0 then
-                return nil
-            end
-            return table.concat(chunks, '')
-        end
-
-        local ok, body = pcall(vim.json.decode, event)
-        if not ok then
-            return nil, label .. ' JSON decode error: ' .. event, 'fatal'
-        end
-        if body and body.error then
-            return nil, label .. ' API error: ' .. (body.error.message or vim.inspect(body.error)), 'fatal'
-        end
-
-        return extract_output_text(body)
+        return responses.parse_event(event, {
+            label = label,
+            event_to_text = event_to_text,
+        })
     end
 
     return driver
