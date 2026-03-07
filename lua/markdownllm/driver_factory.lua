@@ -5,11 +5,12 @@
 
 local M = {}
 
-local openai_compatible = require('markdownllm.providers.openai')
+local openai = require('markdownllm.providers.openai')
+local openai_compatible = require('markdownllm.providers.openai_compatible')
 local grok = require('markdownllm.providers.grok')
 local providers = {
     gemini = require('markdownllm.providers.gemini'),
-    openai = openai_compatible,
+    openai = openai,
     grok = grok,
     deepseek = openai_compatible,
 }

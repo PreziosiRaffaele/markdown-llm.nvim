@@ -116,10 +116,11 @@ Help docs are available in `doc/markdownllm.txt` after running `:helptags`.
   - `provider` provider name: `openai`, `gemini`, `grok`, `deepseek`.
   - `model` model id passed to the provider.
   - `api_key_name` environment variable containing the API key.
-  - `base_url` optional override for OpenAI-compatible endpoints.
+  - `base_url` optional override for the selected provider endpoint.
   - `timeout` optional request timeout in milliseconds.
   - `temperature`, `max_tokens`, `top_p`, `stop`, `frequency_penalty`, `presence_penalty`, `seed`, `reasoning_effort` model parameters.
   - `web_search` enable provider web search tool when supported.
+  - OpenAI uses the Responses API: `max_tokens` maps to `max_output_tokens`; `stop`, `frequency_penalty`, `presence_penalty`, and `seed` are currently ignored with a warning.
 - `presets` list of prompt presets used to seed new chats:
   - `name` label shown in the preset selector.
   - `instruction` content injected under the `# System` section.
@@ -267,7 +268,9 @@ Notes:
 
 The following providers are currently supported:
 
-- `OpenAI-compatible (OpenAI, xAI, DeepSeek)`
+- `OpenAI (Responses API)`
+- `xAI (Responses API)`
+- `DeepSeek (chat-completions-compatible)`
 - `Google (Gemini)`
 
 Other providers can be added per request. Raise an issue or PR to add a new provider.

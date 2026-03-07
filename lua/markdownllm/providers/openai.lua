@@ -1,104 +1,141 @@
---- OpenAI-compatible driver implementation for MarkdownLLM.
+--- OpenAI /v1/responses driver implementation for MarkdownLLM.
 ---
 --- Responsibilities:
---- - Build OpenAI-compatible payloads.
+--- - Build OpenAI Responses payloads.
 --- - Resolve authentication (API key).
 --- - Parse SSE/JSON responses.
 ---@module 'markdownllm.providers.openai'
 
 local M = {}
+local responses = require('markdownllm.providers.responses')
 
-local logger = require('markdownllm.logger')
+local DEFAULT_BASE_URL = 'https://api.openai.com/v1/responses'
 
-local DEFAULT_BASE_URLS = {
-    openai = 'https://api.openai.com/v1/chat/completions',
-    grok = 'https://api.x.ai/v1/chat/completions',
-    deepseek = 'https://api.deepseek.com/v1/chat/completions',
+local UNSUPPORTED_OPTIONS = {
+    'stop',
+    'frequency_penalty',
+    'presence_penalty',
+    'seed',
 }
 
+---@param messages markdownllm.LLMRequestMessage[]
+---@return string|nil
+---@return table
+local function build_input(messages)
+    local instructions = nil
+    local input = {}
+
+    for _, message in ipairs(messages or {}) do
+        if instructions == nil and message.role == 'system' then
+            instructions = message.content
+        else
+            table.insert(input, {
+                role = message.role,
+                content = message.content,
+            })
+        end
+    end
+
+    return instructions, input
+end
+
+---@param event_type string|nil
 ---@param body table|nil
 ---@return string|nil
-local function extract_text(body)
-    local choice = body and body.choices and body.choices[1]
-    if not choice then
-        return nil
+local function event_to_text(event_type, body)
+    if event_type == 'response.output_text.delta' then
+        return body and body.delta or nil
     end
-
-    local delta = choice.delta
-    if delta and delta.content then
-        return delta.content
-    end
-
-    if choice.text then
-        return choice.text
-    end
-
-    local message = choice.message
-    if message and message.content then
-        return message.content
-    end
-
     return nil
 end
 
-
 ---@param options table|nil
 ---@return table
+---@return string[]
 local function normalize_options(options)
     if type(options) ~= 'table' then
-        return {}
+        return {}, {}
     end
-    local normalized = vim.deepcopy(options)
-    if normalized.web_search ~= nil then
-        if normalized.web_search == true then
-            logger.warn('web_search is not supported for OpenAI-compatible providers; ignoring.')
-        end
-        normalized.web_search = nil
-    end
-    return normalized
-end
 
----@param setup table
----@return string
-local function resolve_base_url(setup)
-    if setup.base_url and setup.base_url ~= '' then
-        return setup.base_url
+    local normalized = {}
+    local warnings = {}
+
+    if options.temperature ~= nil then
+        normalized.temperature = options.temperature
     end
-    local provider_name = setup.provider_name
-    if provider_name and DEFAULT_BASE_URLS[provider_name] then
-        return DEFAULT_BASE_URLS[provider_name]
+
+    if options.top_p ~= nil then
+        normalized.top_p = options.top_p
     end
-    return DEFAULT_BASE_URLS.openai
+
+    if options.max_tokens ~= nil then
+        normalized.max_output_tokens = options.max_tokens
+    end
+
+    if options.reasoning_effort ~= nil then
+        normalized.reasoning = {
+            effort = options.reasoning_effort,
+        }
+    end
+
+    if options.web_search == true then
+        normalized.tools = {
+            { type = 'web_search_preview' },
+        }
+    end
+
+    local ignored = {}
+    for _, key in ipairs(UNSUPPORTED_OPTIONS) do
+        if options[key] ~= nil then
+            table.insert(ignored, key)
+        end
+    end
+
+    if #ignored > 0 then
+        table.insert(
+            warnings,
+            'OpenAI Responses ignores unsupported options: ' .. table.concat(ignored, ', ') .. '.'
+        )
+    end
+
+    return normalized, warnings
 end
 
 ---@param setup table
 ---@return table|nil
 ---@return string|nil
 function M.new(setup)
-    local label = setup.provider
+    local label = setup.provider or 'OpenAI'
     local api_key = os.getenv(setup.api_key_name or '')
     if not api_key or api_key == '' then
         return nil, label .. ' API key not found. Set environment variable ' .. tostring(setup.api_key_name) .. '.'
     end
 
-    local base_url = resolve_base_url(setup)
+    local base_url = setup.base_url and setup.base_url ~= '' and setup.base_url or DEFAULT_BASE_URL
     local driver = {
         stream_format = 'sse',
     }
 
-    ---Build the OpenAI request specification.
+    ---Build the OpenAI Responses request specification.
     ---@param request markdownllm.LLMRequest
     ---@return table|nil
     ---@return string|nil
     function driver.spec(request)
+        local instructions, input = build_input(request.messages)
+        local options, warnings = normalize_options(request.options)
+
         local payload = {
             model = request.context.model,
-            messages = request.messages,
+            input = input,
             stream = request.context.stream and true or false,
+            store = false,
         }
 
-        local options = request.options or {}
-        payload = vim.tbl_deep_extend('force', payload, normalize_options(options))
+        if instructions and instructions ~= '' then
+            payload.instructions = instructions
+        end
+
+        payload = vim.tbl_deep_extend('force', payload, options)
 
         return {
             url = base_url,
@@ -107,6 +144,7 @@ function M.new(setup)
                 ['Authorization'] = 'Bearer ' .. api_key,
             },
             body = payload,
+            warnings = warnings,
         }
     end
 
@@ -116,48 +154,10 @@ function M.new(setup)
     ---@return string|nil
     ---@return string|nil
     function driver.parse(event)
-        local chunks = {}
-        local saw_data = false
-
-        for line in event:gmatch('[^\r\n]+') do
-            if vim.startswith(line, 'data: ') then
-                saw_data = true
-                local json_str = line:sub(7)
-                if json_str == '[DONE]' then
-                    return nil
-                end
-
-                local ok, body = pcall(vim.json.decode,json_str)
-                if not ok then
-                    return nil, label .. ' JSON decode error: ' .. json_str, 'warning'
-                end
-                if body and body.error then
-                    return nil, label .. ' API error: ' .. (body.error.message or vim.inspect(body.error)), 'fatal'
-                end
-
-                local text_chunk = extract_text(body)
-                if text_chunk then
-                    table.insert(chunks, text_chunk)
-                end
-            end
-        end
-
-        if saw_data then
-            if #chunks == 0 then
-                return nil
-            end
-            return table.concat(chunks, '')
-        end
-
-        local ok, body = pcall(vim.json.decode, event)
-        if not ok then
-            return nil, label .. ' JSON decode error: ' .. event, 'fatal'
-        end
-        if body and body.error then
-            return nil, label .. ' API error: ' .. (body.error.message or vim.inspect(body.error)), 'fatal'
-        end
-
-        return extract_text(body)
+        return responses.parse_event(event, {
+            label = label,
+            event_to_text = event_to_text,
+        })
     end
 
     return driver
