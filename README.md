@@ -1,19 +1,51 @@
 # MarkdownLLM
-**MarkdownLLM** is a Neovim plugin that provides a simple, markdown-driven interface for interacting with LLM providers. 
+**MarkdownLLM** is a Neovim plugin for chatting with LLM providers in a plain Markdown buffer.
 
 Recently, there has been a proliferation of LLM interaction tools designed as agents (e.g., cursor, claude-code, codex, gemini-cli). While these tools can accelerate workflows, they often lack clear and explicit control over the context provided to the LLM, they operate as "black boxes".
 
-There is a tendency to trust agent-driven code changes or commands without fully understanding the underlying logic. This can create a disconnect between the human and the AI, hindering the human's learning and potentially leading to a loss of control over the software produced. 
+There is a tendency to trust agent-driven code changes or commands without fully understanding the underlying logic. This can create a disconnect between the human and the AI, hindering the human's learning and potentially leading to a loss of control over the software produced.
 
 Unlike agent-based systems, interacting with an LLM through its native web interface keeps the human in a clearly leading role, with collaboration being explicit and the developer maintaining a more critical stance.
 
-By bringing LLM chat into Neovim's native markdown environment, this plugin allows you to have the same critical and iterative dialogue you would have in a web interface, but with the full power of Vim's editing capabilities. 
+By bringing LLM chat into Neovim's native markdown environment, this plugin allows you to have the same critical and iterative dialogue you would have in a web interface, but with the full power of Vim's editing capabilities.
 
-You can easily add, remove, or modify any part of the conversation, giving you **full control over the context**. Change system instructions or tweak model parameters on the fly, all with the efficiency of Vim motions!
+## What You Can Do
 
-## Demo
-<!-- Demo source: https://github.com/user-attachments/assets/5d08506d-e3eb-4a7f-a7aa-117bee2a055f -->
-https://github.com/user-attachments/assets/5d08506d-e3eb-4a7f-a7aa-117bee2a055f
+- Start LLM chats directly inside Neovim
+- Edit any part of the conversation before sending again
+- Switch provider, model, and options from YAML frontmatter
+- Use presets to seed chats with reusable system instructions
+- Run actions on visual selections for common text or code transformations
+- Save chats to disk and resume them later
+
+Each chat is a Markdown document with editable YAML frontmatter, so the complete context always stays visible and under your control.
+
+## Screenshots
+
+### Chat workflow
+
+Use MarkdownLLM as a regular chat buffer: start a conversation, iterate on it, and edit the context directly when needed.
+
+#### Start a chat
+
+![Start a chat](https://github.com/user-attachments/assets/ec039ce0-3fad-4749-aa45-3ce6ea17c18b)
+
+#### Chat with the LLM
+
+![chat](https://github.com/user-attachments/assets/a1ce2fbe-1507-4520-9a3e-4c839e6cd28d)
+
+#### Edit chat
+
+![Edit chat](https://github.com/user-attachments/assets/eb70df35-6473-46d9-97ff-512ee562e6f6)
+
+### Actions workflow
+
+Actions let you send a visual selection through a predefined prompt, making common text and code transformations faster.
+
+#### Actions
+
+![Actions](https://github.com/user-attachments/assets/6774e729-a8a7-4ed3-8c66-bab84b36d199)
+
 
 ## Install
 
