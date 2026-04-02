@@ -55,8 +55,10 @@ end
 ---@return nil
 function M.select_action(on_select)
     local actions = config_mod.config.actions or {}
-    local items = vim.deepcopy(actions)
-    table.insert(items, custom_prompt_action)
+    local items = {
+        custom_prompt_action
+    }
+    vim.list_extend(items, vim.deepcopy(actions))
 
     vim.ui.select(items, {
         prompt = 'Select MarkdownLLM action > ',
