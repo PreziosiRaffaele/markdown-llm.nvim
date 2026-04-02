@@ -257,6 +257,48 @@ local function get_action_execution()
     }
 end
 
+---Create a range extmark for the selection.
+---@param bufnr integer
+---@param range table
+---@return integer mark_id
+local function set_action_range_mark(bufnr, range)
+    return vim.api.nvim_buf_set_extmark(bufnr, ns_action, range.start_row, range.start_col, {
+        end_row = range.end_row,
+        end_col = range.end_col,
+    })
+end
+
+---Get a range table from an extmark.
+---@param bufnr integer
+---@param mark_id integer
+---@return table|nil range
+local function get_action_range(bufnr, mark_id)
+    local mark = vim.api.nvim_buf_get_extmark_by_id(bufnr, ns_action, mark_id, { details = true })
+    if not mark or #mark == 0 then
+        return nil
+    end
+    local details = mark[3] or {}
+    if details.end_row == nil or details.end_col == nil then
+        return nil
+    end
+    return {
+        start_row = mark[1],
+        start_col = mark[2],
+        end_row = details.end_row,
+        end_col = details.end_col,
+    }
+end
+
+---Clear an action extmark.
+---@param bufnr integer
+---@param mark_id integer|nil
+---@return nil
+local function clear_action_mark(bufnr, mark_id)
+    if mark_id and vim.api.nvim_buf_is_valid(bufnr) then
+        vim.api.nvim_buf_del_extmark(bufnr, ns_action, mark_id)
+    end
+end
+
 ---Send a replace action request and write the completed response back into the selected range.
 ---@param action table
 ---@param execution table
@@ -435,48 +477,6 @@ local function run_chat_action(preset, action, execution)
     local chat_bufnr = M.open_chat(preset)
     buffer.replace_last_user_block(chat_bufnr, user_text)
     M.send_request(chat_bufnr)
-end
-
----Create a range extmark for the selection.
----@param bufnr integer
----@param range table
----@return integer mark_id
-local function set_action_range_mark(bufnr, range)
-    return vim.api.nvim_buf_set_extmark(bufnr, ns_action, range.start_row, range.start_col, {
-        end_row = range.end_row,
-        end_col = range.end_col,
-    })
-end
-
----Get a range table from an extmark.
----@param bufnr integer
----@param mark_id integer
----@return table|nil range
-local function get_action_range(bufnr, mark_id)
-    local mark = vim.api.nvim_buf_get_extmark_by_id(bufnr, ns_action, mark_id, { details = true })
-    if not mark or #mark == 0 then
-        return nil
-    end
-    local details = mark[3] or {}
-    if details.end_row == nil or details.end_col == nil then
-        return nil
-    end
-    return {
-        start_row = mark[1],
-        start_col = mark[2],
-        end_row = details.end_row,
-        end_col = details.end_col,
-    }
-end
-
----Clear an action extmark.
----@param bufnr integer
----@param mark_id integer|nil
----@return nil
-local function clear_action_mark(bufnr, mark_id)
-    if mark_id and vim.api.nvim_buf_is_valid(bufnr) then
-        vim.api.nvim_buf_del_extmark(bufnr, ns_action, mark_id)
-    end
 end
 
 ---Send the current chat buffer to the configured provider.
