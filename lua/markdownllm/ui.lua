@@ -41,7 +41,7 @@ function M.select_preset(on_select)
     vim.ui.select(presets, {
         prompt = 'Select prompt preset > ',
         format_item = function(item)
-            local ok, setup = pcall(config_mod.resolve_preset_setup_name, item)
+            local ok, setup = pcall(config_mod.resolve_preset_setup, item)
             if ok then
                 return string.format('%s  [setup: %s]', item.name, setup.name)
             end

@@ -21,7 +21,7 @@ lua/
 ```
 
 ## Core Principles
-All modifications to this repository must adhere to the core tenets of the Unix philosophy. The goal is a system composed of small, simple, and well-defined parts that work together effectively.
+- All modifications to this repository must adhere to the core tenets of the Unix philosophy. The goal is a system composed of small, simple, and well-defined parts that work together effectively.
 
 ## LLM Engine Contract
 Keep the low-level LLM engine reusable and separate from Neovim UI/buffer workflows.
@@ -84,3 +84,23 @@ Keep the low-level LLM engine reusable and separate from Neovim UI/buffer workfl
             *   *Example*: `function get_current_filetype() return vim.bo.filetype end`
         *   A **Command** is a function that causes a side effect. It should be named for its action and should not return data unless it's an indicator of success/failure.
             *   *Example*: `function set_light_theme() ... end`
+
+### 7. Module and Methods Documentation
+- Each module needs to have a clear description of its responsibilities; ideally, it should have a single responsibility.
+- Each method needs a clear description of what it does, along with descriptions of its inputs and outputs. From the method's documentation, its behavior should be evident.
+
+### 8. Module Layout
+- Structure Lua modules in two explicit blocks:
+  - local helpers first
+  - public `M.*` methods last
+- Separate the two blocks with visible banner comments, for example:
+```lua
+-- ============================================================================
+-- Local helpers
+-- ============================================================================
+
+-- ============================================================================
+-- Public API
+-- ============================================================================
+```
+- Keep internal workflows calling local helpers directly. Do not expose helper functions on `M` unless they are part of the intended public module interface.

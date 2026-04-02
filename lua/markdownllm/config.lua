@@ -90,18 +90,16 @@ function M.get_default_setup()
     return M.find_setup(M.config.default_setup_name)
 end
 
----Resolve the setup for a preset or fall back to the default.
+---Resolve the setup for a preset, falling back to the configured default.
 ---@param preset table|nil
 ---@return table
 ---@throws string
-function M.resolve_preset_setup_name(preset)
-    local setup_name
-    if preset and preset.setup and preset.setup ~= '' then
-        setup_name = preset.setup
-    else
-        setup_name = M.config.default_setup_name
+function M.resolve_preset_setup(preset)
+    local setup_name = preset and preset.setup or nil
+    if setup_name and setup_name ~= '' then
+        return M.find_setup(setup_name)
     end
-    return M.find_setup(setup_name)
+    return M.get_default_setup()
 end
 
 ---Find a preset by name.
