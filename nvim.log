@@ -1,0 +1,7 @@
+WRN 2026-04-01T23:53:38.632 c/nvim.42839.0 server_start:197: Failed to start server: operation not permitted: /var/folders/jn/2qnfrzj1517092nm7npznlrr0000gn/T/nvim.raffaelepreziosi/MSqmMx/nvim.46101.0
+WRN 2026-04-01T23:53:38.632 c/nvim.42839.0 server_start:197: Failed to start server: operation not permitted: /var/folders/jn/2qnfrzj1517092nm7npznlrr0000gn/T/nvim.raffaelepreziosi/yo3JnO/nvim.46102.0
+WRN 2026-04-01T23:53:49.078 c/nvim.42839.0 server_start:197: Failed to start server: operation not permitted: /var/folders/jn/2qnfrzj1517092nm7npznlrr0000gn/T/nvim.raffaelepreziosi/RJ1AUp/nvim.46178.0
+WRN 2026-04-01T23:53:49.078 c/nvim.42839.0 server_start:197: Failed to start server: operation not permitted: /var/folders/jn/2qnfrzj1517092nm7npznlrr0000gn/T/nvim.raffaelepreziosi/efHzcI/nvim.46177.0
+WRN 2026-04-02T00:25:39.115 c/nvim.47069.0 server_start:197: Failed to start server: operation not permitted: /var/folders/jn/2qnfrzj1517092nm7npznlrr0000gn/T/nvim.raffaelepreziosi/2ZYwZa/nvim.55561.0
+WRN 2026-04-02T13:53:36.519 ?.30311    server_start:197: Failed to start server: operation not permitted: /var/folders/jn/2qnfrzj1517092nm7npznlrr0000gn/T/nvim.raffaelepreziosi/h4fk8s/nvim.30311.0
+WRN 2026-04-02T13:53:56.474 ?.30482    server_start:197: Failed to start server: operation not permitted: /var/folders/jn/2qnfrzj1517092nm7npznlrr0000gn/T/nvim.raffaelepreziosi/qtkwid/nvim.30482.0
