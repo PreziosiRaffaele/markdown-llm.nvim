@@ -479,29 +479,34 @@ end
 
 ---Send a modal action request and stream the response into a temporary floating preview window.
 ---@param action table
----@param execution table
+---@param visual_selection_context table
 ---@param setup table
 ---@param system_text string
 ---@return nil
-local function run_modal_action(action, execution, setup, system_text)
-    local user_text = build_action_user_text(action, execution.selection_text, execution.filetype)
-    local modal_bufnr, modal_winid = ui.open_modal_preview(action.name or 'MarkdownLLM Preview')
-    vim.api.nvim_buf_set_lines(modal_bufnr, 0, -1, false, { '# MarkdownLLM Preview', '', '_Thinking..._' })
-    vim.bo[modal_bufnr].modifiable = false
+local function run_modal_action(action, visual_selection_context, setup, system_text)
+    local user_text = build_action_user_text(action, visual_selection_context.selection_text, visual_selection_context.filetype)
+    local modal_bufnr, modal_winid = ui.open_modal_preview()
+
+    local function is_modal_valid()
+        return vim.api.nvim_buf_is_valid(modal_bufnr) and vim.api.nvim_win_is_valid(modal_winid)
+    end
+
+    local function set_modal_lines(lines)
+        if not vim.api.nvim_buf_is_valid(modal_bufnr) then return end
+        vim.bo[modal_bufnr].modifiable = true
+        vim.api.nvim_buf_set_lines(modal_bufnr, 0, -1, false, lines)
+        vim.bo[modal_bufnr].modifiable = false
+    end
+
+    set_modal_lines({ '# MarkdownLLM Preview', '', '_Thinking..._' })
 
     local request = build_request(setup, system_text, {
         { role = 'user', text = user_text },
     })
     local started = false
 
-    local function close_modal_if_invalid()
-        return not vim.api.nvim_buf_is_valid(modal_bufnr) or not vim.api.nvim_win_is_valid(modal_winid)
-    end
-
     local function append_modal_text(text)
-        if close_modal_if_invalid() then
-            return
-        end
+        if not is_modal_valid() then return end
 
         vim.bo[modal_bufnr].modifiable = true
         if not started then
@@ -512,65 +517,32 @@ local function run_modal_action(action, execution, setup, system_text)
         vim.bo[modal_bufnr].modifiable = false
     end
 
-    local send_ok, send_err = pcall(function()
-        llm.send(request, {
-            on_chunk = function(chunk)
-                if chunk and chunk ~= '' then
-                    append_modal_text(chunk)
-                end
-            end,
-            on_complete = function()
-                if close_modal_if_invalid() then
-                    return
-                end
-                if not started then
-                    vim.bo[modal_bufnr].modifiable = true
-                    vim.api.nvim_buf_set_lines(
-                        modal_bufnr,
-                        0,
-                        -1,
-                        false,
-                        { '# MarkdownLLM Preview', '', '_No content returned._' }
-                    )
-                    vim.bo[modal_bufnr].modifiable = false
-                end
-                logger.info('Preview ready.')
-            end,
-            on_error = function(msg)
-                if close_modal_if_invalid() then
-                    logger.error(msg)
-                    return
-                end
-                vim.bo[modal_bufnr].modifiable = true
-                vim.api.nvim_buf_set_lines(
-                    modal_bufnr,
-                    0,
-                    -1,
-                    false,
-                    { '# MarkdownLLM Preview', '', msg }
-                )
-                vim.bo[modal_bufnr].modifiable = false
-                logger.error(msg)
-            end,
-            on_warning = function(msg)
-                logger.warn(msg)
-            end,
-        })
-    end)
+    local send_ok, send_err = pcall(llm.send, request, {
+        on_chunk = function(chunk)
+            if chunk and chunk ~= '' then
+                append_modal_text(chunk)
+            end
+        end,
+        on_complete = function()
+            if not is_modal_valid() then return end
+            if not started then
+                set_modal_lines({ '# MarkdownLLM Preview', '', '_No content returned._' })
+            end
+            logger.info('Preview ready.')
+        end,
+        on_error = function(msg)
+            logger.error(msg)
+            set_modal_lines({ '# MarkdownLLM Preview', '', msg })
+        end,
+        on_warning = function(msg)
+            logger.warn(msg)
+        end,
+    })
 
     if not send_ok then
-        if vim.api.nvim_buf_is_valid(modal_bufnr) then
-            vim.bo[modal_bufnr].modifiable = true
-            vim.api.nvim_buf_set_lines(
-                modal_bufnr,
-                0,
-                -1,
-                false,
-                { '# MarkdownLLM Preview', '', tostring(send_err) }
-            )
-            vim.bo[modal_bufnr].modifiable = false
-        end
-        logger.error('MarkdownLLM send failed: ' .. tostring(send_err))
+        local err_msg = tostring(send_err)
+        logger.error('MarkdownLLM send failed: ' .. err_msg)
+        set_modal_lines({ '# MarkdownLLM Preview', '', err_msg })
     end
 end
 

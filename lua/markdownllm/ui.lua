@@ -121,14 +121,13 @@ function M.select_action_kind(on_select)
 end
 
 ---Open a centered modal preview buffer and window.
----@param title string|nil
 ---@return integer bufnr
 ---@return integer winid
-function M.open_modal_preview(title)
+function M.open_modal_preview()
     local columns = vim.o.columns
     local lines = vim.o.lines - vim.o.cmdheight
-    local width = math.max(40, math.floor(columns * 0.8))
-    local height = math.max(8, math.floor(lines * 0.6))
+    local width = math.max(40, math.floor(columns * 0.6))
+    local height = math.max(4, math.floor(lines * 0.2))
 
     width = math.min(width, math.max(columns - 4, 1))
     height = math.min(height, math.max(lines - 4, 1))
@@ -151,7 +150,7 @@ function M.open_modal_preview(title)
         height = height,
         style = 'minimal',
         border = 'rounded',
-        title = title or 'MarkdownLLM Preview',
+        title = 'MarkdownLLM',
         title_pos = 'center',
     })
 
