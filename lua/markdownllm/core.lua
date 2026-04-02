@@ -67,7 +67,7 @@ local function normalize_action_type(action_type)
         action_type = 'replace'
     end
 
-    if action_type ~= 'chat' and action_type ~= 'replace' and action_type ~= 'modal' then
+    if action_type ~= 'chat' and action_type ~= 'replace' then
         action_type = 'chat'
     end
 
@@ -477,75 +477,6 @@ local function run_replace_action(action, execution, setup, system_text)
     end
 end
 
----Send a modal action request and stream the response into a temporary floating preview window.
----@param action table
----@param visual_selection_context table
----@param setup table
----@param system_text string
----@return nil
-local function run_modal_action(action, visual_selection_context, setup, system_text)
-    local user_text = build_action_user_text(action, visual_selection_context.selection_text, visual_selection_context.filetype)
-    local modal_bufnr, modal_winid = ui.open_modal_preview()
-
-    local function is_modal_valid()
-        return vim.api.nvim_buf_is_valid(modal_bufnr) and vim.api.nvim_win_is_valid(modal_winid)
-    end
-
-    local function set_modal_lines(lines)
-        if not vim.api.nvim_buf_is_valid(modal_bufnr) then return end
-        vim.bo[modal_bufnr].modifiable = true
-        vim.api.nvim_buf_set_lines(modal_bufnr, 0, -1, false, lines)
-        vim.bo[modal_bufnr].modifiable = false
-    end
-
-    set_modal_lines({ '# MarkdownLLM Preview', '', '_Thinking..._' })
-
-    local request = build_request(setup, system_text, {
-        { role = 'user', text = user_text },
-    })
-    local started = false
-
-    local function append_modal_text(text)
-        if not is_modal_valid() then return end
-
-        vim.bo[modal_bufnr].modifiable = true
-        if not started then
-            started = true
-            vim.api.nvim_buf_set_lines(modal_bufnr, 0, -1, false, { '# MarkdownLLM Preview', '' })
-        end
-        append_text_at_end(modal_bufnr, text)
-        vim.bo[modal_bufnr].modifiable = false
-    end
-
-    local send_ok, send_err = pcall(llm.send, request, {
-        on_chunk = function(chunk)
-            if chunk and chunk ~= '' then
-                append_modal_text(chunk)
-            end
-        end,
-        on_complete = function()
-            if not is_modal_valid() then return end
-            if not started then
-                set_modal_lines({ '# MarkdownLLM Preview', '', '_No content returned._' })
-            end
-            logger.info('Preview ready.')
-        end,
-        on_error = function(msg)
-            logger.error(msg)
-            set_modal_lines({ '# MarkdownLLM Preview', '', msg })
-        end,
-        on_warning = function(msg)
-            logger.warn(msg)
-        end,
-    })
-
-    if not send_ok then
-        local err_msg = tostring(send_err)
-        logger.error('MarkdownLLM send failed: ' .. err_msg)
-        set_modal_lines({ '# MarkdownLLM Preview', '', err_msg })
-    end
-end
-
 ---Send a chat action request by seeding a new chat buffer and dispatching it through the regular chat workflow.
 ---@param preset table|nil
 ---@param action table
@@ -584,8 +515,6 @@ local function run_action(action)
 
     if action.type == 'replace' then
         run_replace_action(action, visual_selection_context, setup, preset.instruction)
-    elseif action.type == 'modal' then
-        run_modal_action(action, visual_selection_context, setup, preset.instruction)
     else
         run_chat_action(preset, action, visual_selection_context)
     end

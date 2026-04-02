@@ -160,11 +160,11 @@ Help docs are available in `doc/markdownllm.txt` after running `:helptags`.
 - `actions` list of actions used for visual selection prompts:
   - `name` label shown in the action selector.
   - `preset` preset name to open; defaults to the first preset.
-  - `type` `chat` (default), `replace`, or `modal`.
+  - `type` `chat` (default) or `replace`.
   - `language` optional code fence language for legacy `type = "code"` compatibility; defaults to the current buffer filetype.
   - `pre_text` text prepended before the selection.
   - legacy aliases `text`, `code`, and `replace_visual` are still accepted and mapped to `chat`, `chat`, and `replace`.
-  - `chat`, `replace`, and `modal` include the selected text as Markdown blockquotes.
+  - unsupported action types now fall back to `chat`.
   - legacy `type = "code"` still forces fenced code rendering.
 - `chat_save_dir` directory for saved chats (default: `stdpath("data")/markdownllm/chats`).
 - `keymaps` optional command bindings:
@@ -289,7 +289,7 @@ actions = {
   {
     name = "Traduci",
     preset = "Traduttore Italiano",
-    type = "modal",
+    type = "chat",
     pre_text = "Traduci questo testo in italiano:\n\n",
   },
 }
@@ -297,10 +297,8 @@ actions = {
 
 Notes:
 - `type = "replace"` replaces the selected text in-place with the model response.
-- `type = "modal"` opens a floating preview window and never edits the source buffer.
 - `shortcut` adds a visual-mode keymap for the action, bypassing the action picker.
-- `:MarkLLMRunAction` always adds a built-in `Custom prompt...` entry to the action picker. It uses the default setup, prompts for freeform instructions, then asks whether to run as `chat`, `replace`, or `modal`.
-- `chat`, `replace`, and `modal` quote the selection in Markdown before sending it.
+- `:MarkLLMRunAction` always adds a built-in `Custom prompt...` entry to the action picker. It uses the default setup, prompts for freeform instructions, then asks whether to run as `chat` or `replace`.
 - Legacy `type = "code"` still forces fenced code rendering.
 
 ## Providers

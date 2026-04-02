@@ -21,11 +21,6 @@ local action_kinds = {
         label = 'Replace',
         description = 'Replace the selection with the model response.',
     },
-    {
-        type = 'modal',
-        label = 'Modal',
-        description = 'Show the response in a floating preview.',
-    },
 }
 
 ---Prompt the user to select a preset.
@@ -118,57 +113,6 @@ function M.select_action_kind(on_select)
             on_select(choice)
         end)
     end)
-end
-
----Open a centered modal preview buffer and window.
----@return integer bufnr
----@return integer winid
-function M.open_modal_preview()
-    local columns = vim.o.columns
-    local lines = vim.o.lines - vim.o.cmdheight
-    local width = math.max(40, math.floor(columns * 0.6))
-    local height = math.max(4, math.floor(lines * 0.2))
-
-    width = math.min(width, math.max(columns - 4, 1))
-    height = math.min(height, math.max(lines - 4, 1))
-
-    local row = math.max(1, math.floor((lines - height) / 2))
-    local col = math.max(0, math.floor((columns - width) / 2))
-
-    local bufnr = vim.api.nvim_create_buf(false, true)
-    vim.bo[bufnr].bufhidden = 'wipe'
-    vim.bo[bufnr].buftype = 'nofile'
-    vim.bo[bufnr].swapfile = false
-    vim.bo[bufnr].modifiable = true
-    vim.bo[bufnr].filetype = 'markdown'
-
-    local winid = vim.api.nvim_open_win(bufnr, true, {
-        relative = 'editor',
-        row = row,
-        col = col,
-        width = width,
-        height = height,
-        style = 'minimal',
-        border = 'rounded',
-        title = 'MarkdownLLM',
-        title_pos = 'center',
-    })
-
-    vim.wo[winid].wrap = true
-    vim.wo[winid].cursorline = false
-    vim.wo[winid].number = false
-    vim.wo[winid].relativenumber = false
-
-    local close = function()
-        if vim.api.nvim_win_is_valid(winid) then
-            vim.api.nvim_win_close(winid, true)
-        end
-    end
-
-    vim.keymap.set('n', 'q', close, { buffer = bufnr, nowait = true, silent = true })
-    vim.keymap.set('n', '<Esc>', close, { buffer = bufnr, nowait = true, silent = true })
-
-    return bufnr, winid
 end
 
 ---Prompt the user to select a setup.

@@ -53,7 +53,7 @@ Commands                                                     *markdownllm-comman
     Send the current visual selection using an action. When called without an
     action name, the picker shows configured actions plus a built-in
     "Custom prompt..." entry that uses the default setup, prompts for freeform
-    instructions, and then asks whether to run as chat, replace, or modal.
+    instructions, and then asks whether to run as chat or replace.
     For action names with spaces or parentheses, wrap the name in double quotes.
 
 :MarkLLMSelectBufferSetup
@@ -116,10 +116,9 @@ actions
     List of actions used for visual selection prompts. Each action is a table with:
       name      (string) label shown in the action selector.
       preset    (string|nil) preset name to open; defaults to first preset.
-      type      (string|nil) "chat" (default), "replace", or "modal".
-                "chat" opens a new chat buffer, "replace" replaces the
-                selection with the model response, and "modal" shows the
-                response in a floating preview.
+      type      (string|nil) "chat" (default) or "replace".
+                "chat" opens a new chat buffer and "replace" replaces the
+                selection with the model response.
       language  (string|nil) optional code fence language for legacy
                 "code" compatibility; defaults to the current buffer
                 filetype when omitted.
@@ -127,8 +126,7 @@ actions
       shortcut  (string|nil) visual-mode keymap to run the action directly.
     Legacy aliases "text", "code", and "replace_visual" are still accepted.
     "code" maps to "chat" and forces fenced code rendering.
-    "chat", "replace", and "modal" wrap the selected text as Markdown
-    blockquotes before sending it.
+    Unsupported action types fall back to "chat".
     The :MarkLLMRunAction picker also includes a built-in "Custom prompt..."
     entry. It is not configured in this list and always uses the default setup.
 
