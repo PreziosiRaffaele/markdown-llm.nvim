@@ -259,21 +259,44 @@ end
 ---@field bottom integer bottom label extmark id
 
 ---Create extmarks for the replace target.
+---
+---Marker placement rules:
+---- Single-line selections use a single inline `virt_text` marker at end-of-line.
+---- Multi-line selections starting on the first buffer line also use an inline top marker,
+---  because `virt_lines_above` cannot render above row `0`.
+---- Other multi-line selections use a virtual line above the start row and another
+---  virtual line below the end row.
 ---@param bufnr integer
 ---@param range table
 ---@return markdownllm.ActionMarks marks
 local function set_action_marks(bufnr, range)
+    local top_mark_opts = nil
+    local is_single_line = range.start_row == range.end_row
+
+    if range.start_row == 0 or is_single_line then
+        top_mark_opts = {
+            virt_text = { { ' Replacing...', 'Comment' } },
+            virt_text_pos = 'eol',
+            hl_mode = 'combine',
+        }
+    else
+        top_mark_opts = {
+            virt_lines = { { { 'Replacing...', 'Comment' } } },
+            virt_lines_above = true,
+        }
+    end
+
     local range_mark_id = vim.api.nvim_buf_set_extmark(bufnr, ns_action, range.start_row, range.start_col, {
         end_row = range.end_row,
         end_col = range.end_col,
     })
-    local top_mark_id = vim.api.nvim_buf_set_extmark(bufnr, ns_action, range.start_row, range.start_col, {
-        virt_lines = { { { 'Replacing...', 'Comment' } } },
-        virt_lines_above = true,
-    })
-    local bottom_mark_id = vim.api.nvim_buf_set_extmark(bufnr, ns_action, range.end_row, 0, {
-        virt_lines = { { { 'Replacing...', 'Comment' } } },
-    })
+    local top_mark_id = vim.api.nvim_buf_set_extmark(bufnr, ns_action, range.start_row, range.start_col, top_mark_opts)
+    local bottom_mark_id = nil
+    if not is_single_line then
+        bottom_mark_id = vim.api.nvim_buf_set_extmark(bufnr, ns_action, range.end_row, 0, {
+            virt_lines = { { { 'Replacing...', 'Comment' } } },
+        })
+    end
 
     return {
         range = range_mark_id,
