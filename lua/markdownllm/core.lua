@@ -253,15 +253,33 @@ local function get_visual_selection_context()
     }
 end
 
----Create a range extmark for the selection.
+---@class markdownllm.ActionMarks
+---@field range integer tracked range extmark id
+---@field top integer top label extmark id
+---@field bottom integer bottom label extmark id
+
+---Create extmarks for the replace target.
 ---@param bufnr integer
 ---@param range table
----@return integer mark_id
-local function set_action_range_mark(bufnr, range)
-    return vim.api.nvim_buf_set_extmark(bufnr, ns_action, range.start_row, range.start_col, {
+---@return markdownllm.ActionMarks marks
+local function set_action_marks(bufnr, range)
+    local range_mark_id = vim.api.nvim_buf_set_extmark(bufnr, ns_action, range.start_row, range.start_col, {
         end_row = range.end_row,
         end_col = range.end_col,
     })
+    local top_mark_id = vim.api.nvim_buf_set_extmark(bufnr, ns_action, range.start_row, range.start_col, {
+        virt_lines = { { { 'Replacing...', 'Comment' } } },
+        virt_lines_above = true,
+    })
+    local bottom_mark_id = vim.api.nvim_buf_set_extmark(bufnr, ns_action, range.end_row, 0, {
+        virt_lines = { { { 'Replacing...', 'Comment' } } },
+    })
+
+    return {
+        range = range_mark_id,
+        top = top_mark_id,
+        bottom = bottom_mark_id,
+    }
 end
 
 ---Get a range table from an extmark.
@@ -285,13 +303,19 @@ local function get_action_range(bufnr, mark_id)
     }
 end
 
----Clear an action extmark.
+---Clear replace target extmarks.
 ---@param bufnr integer
----@param mark_id integer|nil
+---@param marks table|nil
 ---@return nil
-local function clear_action_mark(bufnr, mark_id)
-    if mark_id and vim.api.nvim_buf_is_valid(bufnr) then
-        vim.api.nvim_buf_del_extmark(bufnr, ns_action, mark_id)
+local function clear_action_marks(bufnr, marks)
+    if not marks or not vim.api.nvim_buf_is_valid(bufnr) then
+        return
+    end
+
+    for _, mark_id in pairs(marks) do
+        if mark_id then
+            vim.api.nvim_buf_del_extmark(bufnr, ns_action, mark_id)
+        end
     end
 end
 
@@ -423,7 +447,7 @@ local function run_replace_action(action, execution, setup, system_text)
         return
     end
 
-    local mark_id = set_action_range_mark(bufnr, selection_range)
+    local marks = set_action_marks(bufnr, selection_range)
     local user_text = build_action_user_text(action, selection_text, filetype)
     local request = build_request(setup, system_text, {
         { role = 'user', text = user_text },
@@ -443,8 +467,8 @@ local function run_replace_action(action, execution, setup, system_text)
                     return
                 end
 
-                local range = get_action_range(bufnr, mark_id)
-                clear_action_mark(bufnr, mark_id)
+                local range = get_action_range(bufnr, marks.range)
+                clear_action_marks(bufnr, marks)
                 if not range then
                     return
                 end
@@ -462,7 +486,7 @@ local function run_replace_action(action, execution, setup, system_text)
                 logger.info('Replaced with:', preview)
             end,
             on_error = function(msg)
-                clear_action_mark(bufnr, mark_id)
+                clear_action_marks(bufnr, marks)
                 logger.error(msg)
             end,
             on_warning = function(msg)
@@ -472,7 +496,7 @@ local function run_replace_action(action, execution, setup, system_text)
     end)
 
     if not send_ok then
-        clear_action_mark(bufnr, mark_id)
+        clear_action_marks(bufnr, marks)
         logger.error('MarkdownLLM send failed: ' .. tostring(send_err))
     end
 end

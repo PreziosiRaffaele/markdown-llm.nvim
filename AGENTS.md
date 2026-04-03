@@ -63,6 +63,8 @@ Keep the low-level LLM engine reusable and separate from Neovim UI/buffer workfl
 *   **Principle**: Every Lua function and module should have a predictable contract. It must be obvious what data it requires (arguments), what data it produces (return values), and what changes it makes to the editor's state (side effects).
 *   **How to Apply This Here**:
     *   **Document the Contract with Annotations**: At the top of any non-trivial function, use EmmyLua/LDoc style comments to document its interface. This is both human-readable and can be understood by language servers.
+        *   When returning a structured table, prefer declaring a named `---@class` above the function and use `---@return that.ClassName`.
+        *   Use `---@field` only as part of a class declaration. Do not place `---@field` lines after a function `---@return`, because Lua language tooling will flag that layout as invalid.
     *   **Use Return Values for Data and Errors**:
         *   **Successful data** is the primary return value. A function that calculates something should `return` the result.
         *   **Errors**

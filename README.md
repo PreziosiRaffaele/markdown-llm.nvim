@@ -296,7 +296,7 @@ actions = {
 ```
 
 Notes:
-- `type = "replace"` replaces the selected text in-place with the model response.
+- `type = "replace"` shows a temporary `Replacing...` marker above the target and then replaces the selected text in-place with the model response.
 - `shortcut` adds a visual-mode keymap for the action, bypassing the action picker.
 - `:MarkLLMRunAction` always adds a built-in `Custom prompt...` entry to the action picker. It uses the default setup, prompts for freeform instructions, then asks whether to run as `chat` or `replace`.
 - Legacy `type = "code"` still forces fenced code rendering.
