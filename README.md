@@ -129,7 +129,7 @@ require("markdownllm").setup({
 
 - `:MarkLLMNewChat` open a new chat buffer (optionally with a preset).
 - `:MarkLLMSendChat` send the current chat buffer to the provider.
-- `:MarkLLMRunAction` send the current visual selection using an action.
+- `:MarkLLMRunAction` send the current visual selection using a configured action or the built-in `Custom prompt...` flow.
 - `:MarkLLMSelectBufferSetup` set the setup for the current buffer.
 - `:MarkLLMSelectDefaultSetup` set the default setup for new buffers.
 - `:MarkLLMSaveChat` save the current chat buffer to disk.
@@ -160,9 +160,12 @@ Help docs are available in `doc/markdownllm.txt` after running `:helptags`.
 - `actions` list of actions used for visual selection prompts:
   - `name` label shown in the action selector.
   - `preset` preset name to open; defaults to the first preset.
-  - `type` `text` (default) or `code`; `code` wraps the selection in a fenced code block.
-  - `language` optional code fence language when `type = "code"`; defaults to the current buffer filetype.
+  - `type` `chat` (default) or `replace`.
+  - `language` optional code fence language for legacy `type = "code"` compatibility; defaults to the current buffer filetype.
   - `pre_text` text prepended before the selection.
+  - legacy aliases `text`, `code`, and `replace_visual` are still accepted and mapped to `chat`, `chat`, and `replace`.
+  - unsupported action types now fall back to `chat`.
+  - legacy `type = "code"` still forces fenced code rendering.
 - `chat_save_dir` directory for saved chats (default: `stdpath("data")/markdownllm/chats`).
 - `keymaps` optional command bindings:
   - `newChat`
@@ -266,35 +269,37 @@ actions = {
   {
     name = "Summarize",
     preset = "Chat",
-    type = "text",
+    type = "chat",
     pre_text = "Summarize the following text:\n\n",
   },
   {
     name = 'Rewrite',
     preset = 'Grammar Check',
-    type = 'replace_visual',
+    type = 'replace',
     pre_text = 'Please correct the following text. Return only the revised version without additional comments:',
     shortcut = '<leader>mr',
   },
   {
     name = "Explain Code",
     preset = "Software Development",
-    type = "code",
+    type = "chat",
     language = "lua",
     pre_text = "Explain what this code does:\n\n",
   },
   {
     name = "Traduci",
     preset = "Traduttore Italiano",
-    type = "text",
+    type = "chat",
     pre_text = "Traduci questo testo in italiano:\n\n",
   },
 }
 ```
 
 Notes:
-- `type = "replace_visual"` replaces the selected text in-place with the model response.
+- `type = "replace"` shows a temporary `Replacing...` marker above the target and then replaces the selected text in-place with the model response.
 - `shortcut` adds a visual-mode keymap for the action, bypassing the action picker.
+- `:MarkLLMRunAction` always adds a built-in `Custom prompt...` entry to the action picker. It uses the default setup, prompts for freeform instructions, then asks whether to run as `chat` or `replace`.
+- Legacy `type = "code"` still forces fenced code rendering.
 
 ## Providers
 

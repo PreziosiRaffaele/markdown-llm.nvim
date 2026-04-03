@@ -21,7 +21,7 @@ lua/
 ```
 
 ## Core Principles
-All modifications to this repository must adhere to the core tenets of the Unix philosophy. The goal is a system composed of small, simple, and well-defined parts that work together effectively.
+- All modifications to this repository must adhere to the core tenets of the Unix philosophy. The goal is a system composed of small, simple, and well-defined parts that work together effectively.
 
 ## LLM Engine Contract
 Keep the low-level LLM engine reusable and separate from Neovim UI/buffer workflows.
@@ -63,6 +63,8 @@ Keep the low-level LLM engine reusable and separate from Neovim UI/buffer workfl
 *   **Principle**: Every Lua function and module should have a predictable contract. It must be obvious what data it requires (arguments), what data it produces (return values), and what changes it makes to the editor's state (side effects).
 *   **How to Apply This Here**:
     *   **Document the Contract with Annotations**: At the top of any non-trivial function, use EmmyLua/LDoc style comments to document its interface. This is both human-readable and can be understood by language servers.
+        *   When returning a structured table, prefer declaring a named `---@class` above the function and use `---@return that.ClassName`.
+        *   Use `---@field` only as part of a class declaration. Do not place `---@field` lines after a function `---@return`, because Lua language tooling will flag that layout as invalid.
     *   **Use Return Values for Data and Errors**:
         *   **Successful data** is the primary return value. A function that calculates something should `return` the result.
         *   **Errors**
@@ -84,3 +86,23 @@ Keep the low-level LLM engine reusable and separate from Neovim UI/buffer workfl
             *   *Example*: `function get_current_filetype() return vim.bo.filetype end`
         *   A **Command** is a function that causes a side effect. It should be named for its action and should not return data unless it's an indicator of success/failure.
             *   *Example*: `function set_light_theme() ... end`
+
+### 7. Module and Methods Documentation
+- Each module needs to have a clear description of its responsibilities; ideally, it should have a single responsibility.
+- Each method needs a clear description of what it does, along with descriptions of its inputs and outputs. From the method's documentation, its behavior should be evident.
+
+### 8. Module Layout
+- Structure Lua modules in two explicit blocks:
+  - local helpers first
+  - public `M.*` methods last
+- Separate the two blocks with visible banner comments, for example:
+```lua
+-- ============================================================================
+-- Local helpers
+-- ============================================================================
+
+-- ============================================================================
+-- Public API
+-- ============================================================================
+```
+- Keep internal workflows calling local helpers directly. Do not expose helper functions on `M` unless they are part of the intended public module interface.

@@ -12,9 +12,9 @@ local ui = require('markdownllm.ui')
 local util = require('markdownllm.util')
 local ns_action = vim.api.nvim_create_namespace('markdownllm_action')
 
----@class markdownllm.StreamState
----@field started boolean
----@field finished boolean
+-- ============================================================================
+-- Local helpers
+-- ============================================================================
 
 ---Append text to the end of the buffer.
 ---@param bufnr integer
@@ -53,11 +53,52 @@ local function finalize_stream_response(bufnr)
     vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, { '', '## User', '' })
 end
 
----Build the user message text for an action from a selection.
+---Map legacy action config to the current action type for compatibility.
+---@param action_type string
+---@return string normalized_action_type normalized action type
+local function normalize_action_type(action_type)
+    action_type = action_type or 'chat'
+
+    if action_type == 'text' then
+        action_type = 'chat'
+    elseif action_type == 'code' then
+        action_type = 'chat'
+    elseif action_type == 'replace_visual' then
+        action_type = 'replace'
+    end
+
+    if action_type ~= 'chat' and action_type ~= 'replace' then
+        action_type = 'chat'
+    end
+
+    return action_type
+end
+
+---Render the selected text exactly as it will be embedded in the final user prompt.
 ---@param action table
 ---@param selection_text string
----@return string
-function M.build_action_user_text(action, selection_text)
+---@param filetype string|nil
+---@return string rendered_selection markdown fragment appended below `pre_text`
+local function render_action_selection(action, selection_text, filetype)
+    local selection_lines = vim.split(selection_text or '', '\n', { plain = true })
+
+    if action.type == 'chat' then
+        local fence_language = (action and action.language) or filetype or vim.bo.filetype or ''
+        local lines = { '```' .. fence_language }
+        vim.list_extend(lines, selection_lines)
+        table.insert(lines, '```')
+        return table.concat(lines, '\n')
+    else
+        return table.concat(selection_lines, '\n')
+    end
+end
+
+---Build the full user prompt text for an action by combining `pre_text` and the rendered selection payload.
+---@param action table
+---@param selection_text string
+---@param filetype string|nil
+---@return string user_text markdown user message sent to the provider
+local function build_action_user_text(action, selection_text, filetype)
     local lines = {}
     local pre_text = util.trim(action.pre_text or '')
     if pre_text ~= '' then
@@ -65,14 +106,9 @@ function M.build_action_user_text(action, selection_text)
         table.insert(lines, '')
     end
 
-    local kind = action.type or 'text'
-    if kind == 'code' then
-        local lang = action.language or vim.bo.filetype or ''
-        table.insert(lines, '```' .. lang)
-        vim.list_extend(lines, vim.split(selection_text, '\n', { plain = true }))
-        table.insert(lines, '```')
-    else
-        vim.list_extend(lines, vim.split(selection_text, '\n', { plain = true }))
+    local rendered_selection = render_action_selection(action, selection_text, filetype)
+    if rendered_selection ~= '' then
+        vim.list_extend(lines, vim.split(rendered_selection, '\n', { plain = true }))
     end
 
     return util.trim(table.concat(lines, '\n'))
@@ -152,42 +188,98 @@ local function build_request(setup, system_text, messages)
     }
 end
 
----Resolve the preset and setup for an action.
----@param action table
----@return table|nil preset
----@return table|nil setup
----@return string|nil err
-local function resolve_action_context(action)
-    local preset = nil
-    if action and action.preset and action.preset ~= '' then
-        preset = config_mod.find_preset(action.preset)
-        if not preset then
-            return nil, nil, 'Preset "' .. tostring(action.preset) .. '" not found.'
-        end
-    else
-        preset = (config_mod.config.presets and config_mod.config.presets[1]) or nil
-        if not preset then
-            return nil, nil, 'No presets configured. Add at least one preset first.'
-        end
+---Build the system instruction to use for a non-chat action.
+---@param action_type string
+---@return string
+local function build_action_instruction(action_type)
+    if action_type == 'replace' then
+        return table.concat({
+            'Return only the replacement text for the selected content.',
+            'Do not add explanations, comments, code fences, or surrounding prose.',
+            'The response will directly replace the selected text in the editor.',
+        }, ' ')
     end
 
-    local ok, setup_or_err = pcall(config_mod.resolve_preset_setup_name, preset)
-    if not ok then
-        return nil, nil, tostring(setup_or_err)
-    end
-
-    return preset, setup_or_err, nil
+    return ''
 end
 
----Create a range extmark for the selection.
+---Return the preset that should execute the action.
+---@param action table
+---@return table|nil preset configured or synthesized preset used to execute the action
+---@return string|nil err human-readable resolution error when the action cannot be executed
+local function resolve_action_preset(action)
+    local preset = nil
+
+    if action.preset and action.preset ~= '' then
+        preset = config_mod.find_preset(action.preset)
+        if not preset then
+            return nil, 'Preset "' .. tostring(action.preset) .. '" not found.'
+        end
+    end
+
+    if preset then
+        return preset, nil
+    end
+
+    local ok, default_setup_or_err = pcall(config_mod.get_default_setup)
+    if not ok then
+        return nil, tostring(default_setup_or_err)
+    end
+
+    return {
+        name = 'Default (' .. tostring(default_setup_or_err.provider) .. ')',
+        setup = default_setup_or_err.name,
+        instruction = build_action_instruction(action.type)
+    }, nil
+end
+
+
+---Capture the current visual selection and the buffer metadata needed to execute an action later.
+---@return table|nil execution table containing `bufnr`, current `filetype`, selected text, and selected range
+local function get_visual_selection_context()
+    local selection_text, selection_range = util.get_visual_selection_text()
+    logger.trace('Visual selection text: ' .. tostring(selection_text))
+    if not selection_text or util.trim(selection_text) == '' then
+        logger.warn('No visual selection found.')
+        return nil
+    end
+
+    local bufnr = vim.api.nvim_get_current_buf()
+    return {
+        bufnr = bufnr,
+        filetype = vim.bo[bufnr].filetype,
+        selection_text = selection_text,
+        selection_range = selection_range,
+    }
+end
+
+---@class markdownllm.ActionMarks
+---@field range integer tracked range extmark id
+---@field top integer top label extmark id
+---@field bottom integer bottom label extmark id
+
+---Create extmarks for the replace target.
 ---@param bufnr integer
 ---@param range table
----@return integer mark_id
-local function set_action_range_mark(bufnr, range)
-    return vim.api.nvim_buf_set_extmark(bufnr, ns_action, range.start_row, range.start_col, {
+---@return markdownllm.ActionMarks marks
+local function set_action_marks(bufnr, range)
+    local range_mark_id = vim.api.nvim_buf_set_extmark(bufnr, ns_action, range.start_row, range.start_col, {
         end_row = range.end_row,
         end_col = range.end_col,
     })
+    local top_mark_id = vim.api.nvim_buf_set_extmark(bufnr, ns_action, range.start_row, range.start_col, {
+        virt_lines = { { { 'Replacing...', 'Comment' } } },
+        virt_lines_above = true,
+    })
+    local bottom_mark_id = vim.api.nvim_buf_set_extmark(bufnr, ns_action, range.end_row, 0, {
+        virt_lines = { { { 'Replacing...', 'Comment' } } },
+    })
+
+    return {
+        range = range_mark_id,
+        top = top_mark_id,
+        bottom = bottom_mark_id,
+    }
 end
 
 ---Get a range table from an extmark.
@@ -211,20 +303,61 @@ local function get_action_range(bufnr, mark_id)
     }
 end
 
----Clear an action extmark.
+---Clear replace target extmarks.
 ---@param bufnr integer
----@param mark_id integer|nil
+---@param marks table|nil
 ---@return nil
-local function clear_action_mark(bufnr, mark_id)
-    if mark_id and vim.api.nvim_buf_is_valid(bufnr) then
-        vim.api.nvim_buf_del_extmark(bufnr, ns_action, mark_id)
+local function clear_action_marks(bufnr, marks)
+    if not marks or not vim.api.nvim_buf_is_valid(bufnr) then
+        return
     end
+
+    for _, mark_id in pairs(marks) do
+        if mark_id then
+            vim.api.nvim_buf_del_extmark(bufnr, ns_action, mark_id)
+        end
+    end
+end
+
+---Open a new chat buffer for a preset.
+---@param preset table
+---@return integer
+local function open_chat(preset)
+    vim.cmd('enew')
+    local bufnr = vim.api.nvim_get_current_buf()
+
+    vim.bo[bufnr].filetype = 'markdown'
+    vim.bo[bufnr].buftype = 'nofile'
+    vim.bo[bufnr].bufhidden = 'hide'
+    vim.bo[bufnr].swapfile = false
+
+    local setup = config_mod.resolve_preset_setup(preset)
+    local buffer_setup = vim.deepcopy(setup)
+    buffer_setup.name = nil
+    buffer_setup.opts = nil
+
+    vim.api.nvim_buf_set_name(bufnr, buffer.next_chat_name())
+
+    local existing_lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+    local has_content = #existing_lines > 1 or (#existing_lines == 1 and existing_lines[1] ~= '')
+    if not has_content then
+        local template = buffer.chat_template(preset and preset.instruction, buffer_setup)
+        vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, template)
+        vim.api.nvim_win_set_cursor(0, { #template, 0 })
+    else
+        local _, update_err = buffer.update_setup_in_buffer(bufnr, buffer_setup)
+        if update_err then
+            logger.warn('Failed to update YAML frontmatter: ' .. update_err)
+        end
+    end
+
+    return bufnr
 end
 
 ---Send the current chat buffer to the configured provider.
 ---@param bufnr integer
 ---@return nil
-function M.send_request(bufnr)
+local function send_request(bufnr)
     if vim.b[bufnr] and vim.b[bufnr].markdownllm_is_sending then
         logger.warn('A request is already in progress for this buffer.')
         return
@@ -297,46 +430,222 @@ function M.send_request(bufnr)
     end
 end
 
----Open a new chat buffer for a preset.
----@param preset table
----@return integer
-function M.open_chat(preset)
-    vim.cmd('enew')
-    local bufnr = vim.api.nvim_get_current_buf()
+---Send a replace action request and write the completed response back into the selected range.
+---@param action table
+---@param execution table
+---@param setup table
+---@param system_text string
+---@return nil
+local function run_replace_action(action, execution, setup, system_text)
+    local bufnr = execution.bufnr
+    local filetype = execution.filetype
+    local selection_text = execution.selection_text
+    local selection_range = execution.selection_range
 
-    vim.bo[bufnr].filetype = 'markdown'
-    vim.bo[bufnr].buftype = 'nofile'
-    vim.bo[bufnr].bufhidden = 'hide'
-    vim.bo[bufnr].swapfile = false
-
-    local setup = config_mod.resolve_preset_setup_name(preset)
-    local buffer_setup = vim.deepcopy(setup)
-    buffer_setup.name = nil
-    buffer_setup.opts = nil
-
-    vim.api.nvim_buf_set_name(bufnr, buffer.next_chat_name())
-
-    local existing_lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
-    local has_content = #existing_lines > 1 or (#existing_lines == 1 and existing_lines[1] ~= '')
-    if not has_content then
-        local template = buffer.chat_template(preset and preset.instruction, buffer_setup)
-        vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, template)
-        vim.api.nvim_win_set_cursor(0, { #template, 0 })
-    else
-        local _, update_err = buffer.update_setup_in_buffer(bufnr, buffer_setup)
-        if update_err then
-            logger.warn('Failed to update YAML frontmatter: ' .. update_err)
-        end
+    if not selection_range then
+        logger.warn('No visual selection range found.')
+        return
     end
 
-    return bufnr
+    local marks = set_action_marks(bufnr, selection_range)
+    local user_text = build_action_user_text(action, selection_text, filetype)
+    local request = build_request(setup, system_text, {
+        { role = 'user', text = user_text },
+    })
+    request.context.stream = false
+
+    local response_text = ''
+    local send_ok, send_err = pcall(function()
+        llm.send(request, {
+            on_chunk = function(chunk)
+                if chunk and chunk ~= '' then
+                    response_text = chunk
+                end
+            end,
+            on_complete = function()
+                if not vim.api.nvim_buf_is_valid(bufnr) then
+                    return
+                end
+
+                local range = get_action_range(bufnr, marks.range)
+                clear_action_marks(bufnr, marks)
+                if not range then
+                    return
+                end
+
+                local replacement = vim.split(response_text, '\n', { plain = true })
+                vim.api.nvim_buf_set_text(
+                    bufnr,
+                    range.start_row,
+                    range.start_col,
+                    range.end_row,
+                    range.end_col,
+                    replacement
+                )
+                local preview = util.truncate_text(response_text:gsub('\n', '\\n'), 80)
+                logger.info('Replaced with:', preview)
+            end,
+            on_error = function(msg)
+                clear_action_marks(bufnr, marks)
+                logger.error(msg)
+            end,
+            on_warning = function(msg)
+                logger.warn(msg)
+            end,
+        })
+    end)
+
+    if not send_ok then
+        clear_action_marks(bufnr, marks)
+        logger.error('MarkdownLLM send failed: ' .. tostring(send_err))
+    end
+end
+
+---Send a chat action request by seeding a new chat buffer and dispatching it through the regular chat workflow.
+---@param preset table|nil
+---@param action table
+---@param execution table
+---@return nil
+local function run_chat_action(preset, action, execution)
+    local user_text = build_action_user_text(action, execution.selection_text, execution.filetype)
+    local chat_bufnr = open_chat(preset)
+    buffer.replace_last_user_block(chat_bufnr, user_text)
+    send_request(chat_bufnr)
+end
+
+---Run a configured action using the current visual selection.
+---@param action table
+---@return nil
+local function run_action(action)
+    if not action then return end
+
+    local visual_selection_context = get_visual_selection_context()
+    if not visual_selection_context then return end
+
+    -- Ensure backward compatibility
+    action.type = normalize_action_type(action.type)
+
+    local preset, err = resolve_action_preset(action)
+    if err then
+        logger.error(err)
+        return
+    end
+
+    local ok, setup = pcall(config_mod.resolve_preset_setup, preset)
+    if not ok then
+        logger.error(tostring(setup))
+        return
+    end
+
+    if action.type == 'replace' then
+        run_replace_action(action, visual_selection_context, setup, preset.instruction)
+    else
+        run_chat_action(preset, action, visual_selection_context)
+    end
+end
+
+---Prompt for a custom action and run it against the current visual selection.
+---@return nil
+local function prompted_action_from_visual()
+    ui.prompt_action_text(function(input)
+        local prompt_text = util.trim(input or '')
+        if prompt_text == '' then
+            logger.info('Custom action cancelled.')
+            return
+        end
+
+        ui.select_action_kind(function(action_kind)
+            if not action_kind then
+                return
+            end
+
+            local action = {
+                name = 'Custom prompt',
+                pre_text = prompt_text,
+                type = action_kind.type,
+            }
+
+            run_action(action)
+        end)
+    end)
+end
+
+-- ============================================================================
+-- Public API
+-- ============================================================================
+
+---Prompt for a preset and open a new chat.
+---@return nil
+function M.new_chat_workflow()
+    ui.select_preset(function(preset)
+        if not preset then
+            return
+        end
+        open_chat(preset)
+    end)
 end
 
 ---Send the current buffer as a chat request.
 ---@return nil
 function M.send_current_buffer()
     local bufnr = vim.api.nvim_get_current_buf()
-    M.send_request(bufnr)
+    send_request(bufnr)
+end
+
+---Create a chat from the visual selection and send it.
+---@param action_name string|nil
+---@return nil
+function M.action_from_visual(action_name)
+    if action_name and action_name ~= '' then
+        local ok, action = pcall(config_mod.find_action, action_name)
+        if not ok then
+            logger.error(action)
+            return
+        end
+        run_action(action)
+        return
+    end
+
+    ui.select_action(function(action)
+        if not action then
+            return
+        end
+        if action.markdownllm_kind == 'custom_prompt' then
+            prompted_action_from_visual()
+            return
+        end
+        run_action(action)
+    end)
+end
+
+---Select and apply a MarkdownLLM setup for the current buffer.
+---@param bufnr integer|nil
+---@return nil
+function M.select_buffer_setup(bufnr)
+    if not bufnr then
+        return
+    end
+    ui.select_setup(function(setup)
+        local buffer_setup = vim.deepcopy(setup)
+        buffer_setup.name = nil
+        buffer_setup.opts = nil
+        local _, update_err = buffer.update_setup_in_buffer(bufnr, buffer_setup)
+        if update_err then
+            logger.warn('Failed to update YAML frontmatter: ' .. update_err)
+        end
+        logger.info(
+            string.format('MarkdownLLM buffer using setup "%s" (%s / %s)', setup.name, setup.provider, setup.model)
+        )
+    end)
+end
+
+---Select and apply the default setup name.
+---@return nil
+function M.select_default_setup()
+    ui.select_setup(function(setup)
+        config_mod.config.default_setup_name = setup.name
+        logger.info(string.format('Default setup set to "%s"', setup.name))
+    end)
 end
 
 ---Save the current chat buffer to disk.
@@ -426,159 +735,6 @@ function M.resume_saved_chat()
             end
             logger.info('Resumed MarkdownLLM chat: ' .. choice.label)
         end)
-    end)
-end
-
----Run a configured action using the current visual selection.
----@param action table
----@return nil
-function M.run_action(action)
-    if not action then
-        return
-    end
-
-    local selection_text, selection_range = util.get_visual_selection_text()
-    logger.trace('Visual selection text: ' .. tostring(selection_text))
-    if not selection_text or util.trim(selection_text) == '' then
-        logger.warn('No visual selection found.')
-        return
-    end
-
-    local preset, setup, ctx_err = resolve_action_context(action)
-    if ctx_err then
-        logger.error(ctx_err)
-        return
-    end
-
-    if action.type == 'replace_visual' then
-        if not selection_range then
-            logger.warn('No visual selection range found.')
-            return
-        end
-
-        local bufnr = vim.api.nvim_get_current_buf()
-        local mark_id = set_action_range_mark(bufnr, selection_range)
-        local user_text = M.build_action_user_text(action, selection_text)
-        local request = build_request(setup, preset.instruction or '', {
-            { role = 'user', text = user_text },
-        })
-        request.context.stream = false
-
-        local response_text = ''
-        local send_ok, send_err = pcall(function()
-            llm.send(request, {
-                on_chunk = function(chunk)
-                    if chunk and chunk ~= '' then
-                        response_text = chunk
-                    end
-                end,
-                on_complete = function()
-                    if not vim.api.nvim_buf_is_valid(bufnr) then
-                        return
-                    end
-
-                    local range = get_action_range(bufnr, mark_id)
-                    clear_action_mark(bufnr, mark_id)
-                    if not range then
-                        return
-                    end
-
-                    local replacement = vim.split(response_text, '\n', { plain = true })
-                    vim.api.nvim_buf_set_text(
-                        bufnr,
-                        range.start_row,
-                        range.start_col,
-                        range.end_row,
-                        range.end_col,
-                        replacement
-                    )
-                    local preview = util.truncate_text(response_text:gsub('\n', '\\n'), 80)
-                    logger.info('Replaced with:', preview)
-                end,
-                on_error = function(msg)
-                    clear_action_mark(bufnr, mark_id)
-                    logger.error(msg)
-                end,
-                on_warning = function(msg)
-                    logger.warn(msg)
-                end,
-            })
-        end)
-
-        if not send_ok then
-            clear_action_mark(bufnr, mark_id)
-            logger.error('MarkdownLLM send failed: ' .. tostring(send_err))
-        end
-
-        return
-    end
-
-    local user_text = M.build_action_user_text(action, selection_text)
-    local bufnr = M.open_chat(preset)
-    buffer.replace_last_user_block(bufnr, user_text)
-    M.send_request(bufnr)
-end
-
----Create a chat from the visual selection and send it.
----@param action_name string|nil
----@return nil
-function M.action_from_visual(action_name)
-    if action_name and action_name ~= '' then
-        local ok, action = pcall(config_mod.find_action, action_name)
-        if not ok then
-            logger.error(action)
-            return
-        end
-        M.run_action(action)
-        return
-    end
-
-    ui.select_action(function(action)
-        if not action then
-            return
-        end
-        M.run_action(action)
-    end)
-end
-
----Select and apply a MarkdownLLM setup for the current buffer.
----@param bufnr integer|nil
----@return nil
-function M.select_buffer_setup(bufnr)
-    if not bufnr then
-        return
-    end
-    ui.select_setup(function(setup)
-        local buffer_setup = vim.deepcopy(setup)
-        buffer_setup.name = nil
-        buffer_setup.opts = nil
-        local _, update_err = buffer.update_setup_in_buffer(bufnr, buffer_setup)
-        if update_err then
-            logger.warn('Failed to update YAML frontmatter: ' .. update_err)
-        end
-        logger.info(
-            string.format('MarkdownLLM buffer using setup "%s" (%s / %s)', setup.name, setup.provider, setup.model)
-        )
-    end)
-end
-
----Select and apply the default setup name.
----@return nil
-function M.select_default_setup()
-    ui.select_setup(function(setup)
-        config_mod.config.default_setup_name = setup.name
-        logger.info(string.format('Default setup set to "%s"', setup.name))
-    end)
-end
-
----Prompt for a preset and open a new chat.
----@return nil
-function M.new_chat_workflow()
-    ui.select_preset(function(preset)
-        if not preset then
-            return
-        end
-        M.open_chat(preset)
     end)
 end
 
