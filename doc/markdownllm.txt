@@ -101,7 +101,9 @@ setups
       frequency_penalty (number|nil) frequency penalty.
       presence_penalty  (number|nil) presence penalty.
       seed          (number|nil) sampling seed.
-      reasoning_effort (string|nil) reasoning effort hint (OpenAI, Grok, DeepSeek).
+      reasoning_effort (string|nil) provider-agnostic reasoning effort.
+                   "none" strictly requests disabled thinking when supported;
+                   support depends on the provider and model.
       web_search    (boolean|nil) enable provider web search tool when supported.
       OpenAI uses the Responses API: max_tokens maps to max_output_tokens;
                    stop, frequency_penalty, presence_penalty, and seed are
@@ -172,6 +174,39 @@ The following providers are currently supported:
   DeepSeek (chat-completions-compatible)
   Google (Gemini)
 
+REASONING EFFORT
+
+`reasoning_effort` values are not universally portable between providers. The
+special value "none" means thinking must be disabled; MarkdownLLM does not
+substitute a lower effort or the provider default.
+
+  DeepSeek
+      Models with the thinking toggle map "none" to
+      thinking = { type = "disabled" } and omit the top-level reasoning_effort
+      field. Example setup:
+>
+        {
+          name = "DeepSeek No Thinking",
+          provider = "deepseek",
+          model = "deepseek-v4-flash",
+          api_key_name = "DEEPSEEK_API_KEY",
+          reasoning_effort = "none",
+        }
+<
+  OpenAI Responses
+      Sends reasoning = { effort = "none" }. The API determines whether the
+      selected model supports it and reports unsupported models as errors.
+
+  Gemini
+      Maps "none" to thinkingConfig.thinkingBudget = 0 for recognized Gemini
+      2.5 Flash and Flash-Lite models. Gemini 2.5 Pro, Gemini 3, and unknown
+      models are rejected before a request is sent.
+
+  Grok
+      Does not currently support disabled reasoning. Requests using "none" are
+      rejected before they are sent. Existing supported effort values are
+      unchanged.
+
 Other providers can be added per request. Raise an issue or PR to add a new provider.
 
 ==============================================================================
@@ -221,7 +256,9 @@ Usage:
 base_url/timeout, and a `stream` flag. `messages` is the standard list of
 role/content pairs; drivers may translate it to provider-specific payload
 shapes such as Responses `instructions` + `input`. `options` is passed through
-to the provider driver.
+to the provider driver. `reasoning_effort = "none"` is the provider-agnostic
+intent to disable thinking; each driver either maps it to the provider's native
+request shape or returns an error when it cannot honor that intent.
 
 ==============================================================================
 Notes                                                        *markdownllm-notes*

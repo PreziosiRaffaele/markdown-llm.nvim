@@ -15,6 +15,10 @@ local DEFAULT_BASE_URLS = {
     deepseek = 'https://api.deepseek.com/v1/chat/completions',
 }
 
+-- ============================================================================
+-- Local helpers
+-- ============================================================================
+
 ---@param body table|nil
 ---@return string|nil
 local function extract_text(body)
@@ -41,12 +45,21 @@ local function extract_text(body)
 end
 
 ---@param options table|nil
+---@param provider_name string|nil
 ---@return table
-local function normalize_options(options)
+local function normalize_options(options, provider_name)
     if type(options) ~= 'table' then
         return {}
     end
     local normalized = vim.deepcopy(options)
+
+    if provider_name == 'deepseek' and normalized.reasoning_effort == 'none' then
+        normalized.reasoning_effort = nil
+        normalized.thinking = {
+            type = 'disabled',
+        }
+    end
+
     if normalized.web_search ~= nil then
         if normalized.web_search == true then
             logger.warn('web_search is not supported for chat-completions-compatible providers; ignoring.')
@@ -69,11 +82,16 @@ local function resolve_base_url(setup)
     return DEFAULT_BASE_URLS.deepseek
 end
 
+-- ============================================================================
+-- Public API
+-- ============================================================================
+
 ---@param setup table
 ---@return table|nil
 ---@return string|nil
 function M.new(setup)
     local label = setup.provider
+    local provider_name = setup.provider_name or setup.provider
     local api_key = os.getenv(setup.api_key_name or '')
     if not api_key or api_key == '' then
         return nil, label .. ' API key not found. Set environment variable ' .. tostring(setup.api_key_name) .. '.'
@@ -96,7 +114,7 @@ function M.new(setup)
         }
 
         local options = request.options or {}
-        payload = vim.tbl_deep_extend('force', payload, normalize_options(options))
+        payload = vim.tbl_deep_extend('force', payload, normalize_options(options, provider_name))
 
         return {
             url = base_url,

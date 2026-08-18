@@ -150,7 +150,7 @@ Help docs are available in `doc/markdownllm.txt` after running `:helptags`.
   - `api_key_name` environment variable containing the API key.
   - `base_url` optional override for the selected provider endpoint.
   - `timeout` optional request timeout in milliseconds.
-  - `temperature`, `max_tokens`, `top_p`, `stop`, `frequency_penalty`, `presence_penalty`, `seed`, `reasoning_effort` model parameters.
+  - `temperature`, `max_tokens`, `top_p`, `stop`, `frequency_penalty`, `presence_penalty`, `seed`, `reasoning_effort` model parameters. Set `reasoning_effort = "none"` to strictly request disabled thinking; support depends on the provider and model.
   - `web_search` enable provider web search tool when supported.
   - OpenAI uses the Responses API: `max_tokens` maps to `max_output_tokens`; `stop`, `frequency_penalty`, `presence_penalty`, and `seed` are currently ignored with a warning.
 - `presets` list of prompt presets used to seed new chats:
@@ -217,11 +217,12 @@ setups = {
     api_key_name = "GROK_API_KEY",
   },
   {
-    name = "DeepSeek Chat",
+    name = "DeepSeek No Thinking",
     provider = "deepseek",
-    model = "deepseek-chat",
+    model = "deepseek-v4-flash",
     api_key_name = "DEEPSEEK_API_KEY",
     base_url = "https://api.deepseek.com/v1/chat/completions",
+    reasoning_effort = "none",
   },
   {
     name = "Gemini-2.5-pro",
@@ -309,6 +310,21 @@ The following providers are currently supported:
 - `xAI (Responses API)`
 - `DeepSeek (chat-completions-compatible)`
 - `Google (Gemini)`
+
+`reasoning_effort` is a provider-agnostic option, but its values are not
+universally portable. The special value `"none"` means that thinking must be
+disabled; MarkdownLLM never substitutes a lower effort or the model default:
+
+- DeepSeek models with the thinking toggle map `"none"` to
+  `thinking = { type = "disabled" }` and omit the top-level
+  `reasoning_effort` field.
+- OpenAI Responses sends `reasoning = { effort = "none" }`. Model support is
+  determined by the OpenAI API, and an API rejection is returned as an error.
+- Gemini maps `"none"` to `thinkingConfig.thinkingBudget = 0` for recognized
+  Gemini 2.5 Flash and Flash-Lite models. Gemini 2.5 Pro, Gemini 3, and unknown
+  models are rejected before the request is sent.
+- Grok does not currently support disabling reasoning, so `"none"` is rejected
+  before the request is sent. Existing supported effort values are unchanged.
 
 Other providers can be added per request. Raise an issue or PR to add a new provider.
 
