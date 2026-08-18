@@ -1,7 +1,11 @@
 {
+  "runtime": { "version": "LuaJIT" },
+  "workspace": { "checkThirdParty": false },
   "diagnostics": {
-    "globals": [
-      "vim"
-    ]
+    "globals": ["vim"],
+    "severity": {
+      "need-check-nil": "Error",
+      "param-type-mismatch": "Error"
+    }
   }
 }
