@@ -56,7 +56,7 @@ end
 function M.select_action(on_select)
     local actions = config_mod.config.actions or {}
     local items = {
-        custom_prompt_action
+        custom_prompt_action,
     }
     vim.list_extend(items, vim.deepcopy(actions))
 

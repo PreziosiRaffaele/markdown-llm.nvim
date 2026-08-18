@@ -229,10 +229,10 @@ local function resolve_action_preset(action)
     return {
         name = 'Default (' .. tostring(default_setup_or_err.provider) .. ')',
         setup = default_setup_or_err.name,
-        instruction = build_action_instruction(action.type)
-    }, nil
+        instruction = build_action_instruction(action.type),
+    },
+        nil
 end
-
 
 ---Capture the current visual selection and the buffer metadata needed to execute an action later.
 ---@return table|nil execution table containing `bufnr`, current `filetype`, selected text, and selected range
@@ -270,7 +270,7 @@ end
 ---@param range table
 ---@return markdownllm.ActionMarks marks
 local function set_action_marks(bufnr, range)
-    local top_mark_opts = nil
+    local top_mark_opts
     local is_single_line = range.start_row == range.end_row
 
     if range.start_row == 0 or is_single_line then
@@ -525,7 +525,7 @@ local function run_replace_action(action, execution, setup, system_text)
 end
 
 ---Send a chat action request by seeding a new chat buffer and dispatching it through the regular chat workflow.
----@param preset table|nil
+---@param preset table
 ---@param action table
 ---@param execution table
 ---@return nil
@@ -540,17 +540,21 @@ end
 ---@param action table
 ---@return nil
 local function run_action(action)
-    if not action then return end
+    if not action then
+        return
+    end
 
     local visual_selection_context = get_visual_selection_context()
-    if not visual_selection_context then return end
+    if not visual_selection_context then
+        return
+    end
 
     -- Ensure backward compatibility
     action.type = normalize_action_type(action.type)
 
     local preset, err = resolve_action_preset(action)
-    if err then
-        logger.error(err)
+    if not preset then
+        logger.error(err or 'Unable to resolve an action preset.')
         return
     end
 

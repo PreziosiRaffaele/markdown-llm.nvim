@@ -39,9 +39,9 @@ function M.setup(opts)
         util.safe_call(core.send_current_buffer)
     end, { desc = 'Send chat' })
 
-    vim.api.nvim_create_user_command('MarkLLMRunAction', function(opts)
+    vim.api.nvim_create_user_command('MarkLLMRunAction', function(command_opts)
         util.safe_call(function()
-            local action_name = opts.fargs[1]
+            local action_name = command_opts.fargs[1]
             core.action_from_visual(action_name)
         end)
     end, { range = true, nargs = '?', desc = 'Run action' })
@@ -76,13 +76,21 @@ function M.setup(opts)
     end
 
     if config.keymaps and config.keymaps.selectChatSetup then
-        vim.keymap.set('n', config.keymaps.selectChatSetup, ':MarkLLMSelectBufferSetup<CR>',
-            { desc = 'Select chat setup' })
+        vim.keymap.set(
+            'n',
+            config.keymaps.selectChatSetup,
+            ':MarkLLMSelectBufferSetup<CR>',
+            { desc = 'Select chat setup' }
+        )
     end
 
     if config.keymaps and config.keymaps.selectDefaultSetup then
-        vim.keymap.set('n', config.keymaps.selectDefaultSetup, ':MarkLLMSelectDefaultSetup<CR>',
-            { desc = 'Select default setup' })
+        vim.keymap.set(
+            'n',
+            config.keymaps.selectDefaultSetup,
+            ':MarkLLMSelectDefaultSetup<CR>',
+            { desc = 'Select default setup' }
+        )
     end
 
     if config.keymaps and config.keymaps.actions then
@@ -94,10 +102,7 @@ function M.setup(opts)
             if action.shortcut then
                 local desc = action.name and ('Run action: ' .. action.name) or 'Run action'
                 local quoted_name = action.name:gsub('"', '\\"')
-                local cmd = string.format(
-                    ":'<,'>MarkLLMRunAction %s<CR>",
-                    quoted_name
-                )
+                local cmd = string.format(":'<,'>MarkLLMRunAction %s<CR>", quoted_name)
                 vim.keymap.set('v', action.shortcut, cmd, { desc = desc })
             end
         end

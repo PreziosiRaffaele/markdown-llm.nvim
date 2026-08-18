@@ -31,7 +31,6 @@ local function extract_text(body)
     return table.concat(fragments, '\n')
 end
 
-
 ---@param messages markdownllm.LLMRequestMessage[]
 ---@return string
 ---@return markdownllm.LLMRequestMessage[]
@@ -82,7 +81,7 @@ local function build_generation_config(options)
     end
     if options.reasoning_effort ~= nil then
         config.thinkingConfig = {
-            thinkingLevel = options.reasoning_effort
+            thinkingLevel = options.reasoning_effort,
         }
     end
 

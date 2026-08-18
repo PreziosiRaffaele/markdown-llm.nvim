@@ -92,10 +92,7 @@ local function normalize_options(options)
     end
 
     if #ignored > 0 then
-        table.insert(
-            warnings,
-            'OpenAI Responses ignores unsupported options: ' .. table.concat(ignored, ', ') .. '.'
-        )
+        table.insert(warnings, 'OpenAI Responses ignores unsupported options: ' .. table.concat(ignored, ', ') .. '.')
     end
 
     return normalized, warnings

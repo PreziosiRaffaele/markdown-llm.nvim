@@ -92,7 +92,7 @@ function M.new(setup)
 
         if options.reasoning_effort ~= nil then
             payload.reasoning = {
-                effort = options.reasoning_effort
+                effort = options.reasoning_effort,
             }
         end
 
