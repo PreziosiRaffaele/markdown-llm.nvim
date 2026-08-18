@@ -11,6 +11,10 @@ local responses = require('markdownllm.providers.responses')
 
 local DEFAULT_BASE_URL = 'https://api.x.ai/v1/responses'
 
+-- ============================================================================
+-- Local helpers
+-- ============================================================================
+
 ---@param messages markdownllm.LLMRequestMessage[]
 ---@return table
 local function build_input(messages)
@@ -43,6 +47,10 @@ local function event_to_text(event_type, body)
     return nil
 end
 
+-- ============================================================================
+-- Public API
+-- ============================================================================
+
 ---@param setup table
 ---@return table|nil
 ---@return string|nil
@@ -64,9 +72,13 @@ function M.new(setup)
     ---@return string|nil
     function driver.spec(request)
         local options = normalize_options(request.options)
+        local model = request.context.model
+        if options.reasoning_effort == 'none' then
+            return nil, 'Grok model ' .. tostring(model) .. ' does not support reasoning_effort = "none".'
+        end
 
         local payload = {
-            model = request.context.model,
+            model = model,
             input = build_input(request.messages),
             stream = request.context.stream and true or false,
             store = false,

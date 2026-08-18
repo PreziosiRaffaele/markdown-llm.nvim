@@ -9,6 +9,10 @@ local M = {}
 local driver_factory = require('markdownllm.driver_factory')
 local logger = require('markdownllm.logger')
 
+-- ============================================================================
+-- Local helpers and types
+-- ============================================================================
+
 ---@class markdownllm.LLMRequestContext
 ---@field provider string Provider key resolved by driver_factory (e.g. `openai`, `deepseek`, `gemini`, `grok`).
 ---@field model string Provider model id. Gemini uses this in the URL path; OpenAI/Grok/DeepSeek use it in the payload.
@@ -29,7 +33,7 @@ local logger = require('markdownllm.logger')
 ---@field frequency_penalty number|nil Penalize repeated tokens (Gemini/DeepSeek; ignored by OpenAI Responses).
 ---@field presence_penalty number|nil Penalize topic repetition (Gemini/DeepSeek; ignored by OpenAI Responses).
 ---@field seed integer|nil Deterministic seed (Gemini/DeepSeek; ignored by OpenAI Responses).
----@field reasoning_effort string|nil Reasoning effort hint (OpenAI/Grok/DeepSeek).
+---@field reasoning_effort string|nil Provider-agnostic reasoning effort. `"none"` strictly requests disabled thinking when the provider and model support it.
 ---@field web_search boolean|nil Convenience toggle: OpenAI -> web_search_preview; Gemini -> google_search tool; Grok -> web_search tool; DeepSeek ignores.
 
 ---@class markdownllm.LLMRequest
@@ -65,6 +69,10 @@ local function callback_or_noop(callbacks, name)
     end
     return function() end
 end
+
+-- ============================================================================
+-- Public API
+-- ============================================================================
 
 ---@param request markdownllm.LLMRequest
 ---@param callbacks markdownllm.LLMCallbacks

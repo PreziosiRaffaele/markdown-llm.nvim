@@ -54,7 +54,23 @@ Array of message objects, where each object contains:
 | **`frequency_penalty`** | `float` | Penalizes new tokens based on their existing frequency in the text so far (typically -2.0 to 2.0). |
 | **`presence_penalty`** | `float` | Penalizes new tokens based on whether they appear in the text so far (typically -2.0 to 2.0). |
 | **`seed`** | `integer` | If specified, the system will make a best effort to sample deterministically. |
+| **`reasoning_effort`** | `string` | Provider-agnostic reasoning effort. The special value `"none"` strictly requests disabled thinking and fails when the provider or model cannot honor it. |
 | **`web_search`** | `boolean` | When `true`, OpenAI enables `web_search_preview`, Gemini enables Google Search, Grok enables `web_search`, and DeepSeek ignores it with a warning. |
+
+`reasoning_effort` is a stable public option, not a promise that provider
+values are interchangeable. Drivers own the native mapping and capability
+checks:
+
+| Provider | `reasoning_effort = "none"` behavior |
+| :--- | :--- |
+| DeepSeek | Models with the thinking toggle send `thinking = { type = "disabled" }` and omit top-level `reasoning_effort`. |
+| OpenAI Responses | Sends `reasoning = { effort = "none" }`; the API validates model support. |
+| Gemini | Sends `thinkingConfig = { thinkingBudget = 0 }` for recognized Gemini 2.5 Flash and Flash-Lite models; rejects unsupported and unknown models locally. |
+| Grok Responses | Rejects the request locally because disabled reasoning is not supported. |
+
+An omitted effort preserves provider defaults. Non-`"none"` values keep their
+existing driver mappings. Normalization operates on copies so request options
+and configured setups remain unchanged.
 
 
 ### Example Non-Streaming Request 
