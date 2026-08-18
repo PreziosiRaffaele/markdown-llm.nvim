@@ -9,6 +9,38 @@
 local M = {}
 local provider_util = require('markdownllm.providers.util')
 
+local DISABLE_THINKING_MODELS = {
+    ['gemini-2.5-flash'] = true,
+    ['gemini-2.5-flash-lite'] = true,
+}
+
+local DISABLE_THINKING_MODEL_PATTERNS = {
+    '^gemini%-2%.5%-flash%-preview%-%d%d%-%d%d$',
+    '^gemini%-2%.5%-flash%-lite%-preview%-%d%d%-%d%d$',
+}
+
+-- ============================================================================
+-- Local helpers
+-- ============================================================================
+
+---Return whether a Gemini model is known to accept a zero thinking budget.
+---@param model string|nil
+---@return boolean
+local function supports_disabled_thinking(model)
+    if type(model) ~= 'string' then
+        return false
+    end
+    if DISABLE_THINKING_MODELS[model] then
+        return true
+    end
+    for _, pattern in ipairs(DISABLE_THINKING_MODEL_PATTERNS) do
+        if model:match(pattern) then
+            return true
+        end
+    end
+    return false
+end
+
 ---@param body table|nil
 ---@return string|nil
 local function extract_text(body)
@@ -30,7 +62,6 @@ local function extract_text(body)
 
     return table.concat(fragments, '\n')
 end
-
 
 ---@param messages markdownllm.LLMRequestMessage[]
 ---@return string
@@ -81,9 +112,15 @@ local function build_generation_config(options)
         config.seed = options.seed
     end
     if options.reasoning_effort ~= nil then
-        config.thinkingConfig = {
-            thinkingLevel = options.reasoning_effort
-        }
+        if options.reasoning_effort == 'none' then
+            config.thinkingConfig = {
+                thinkingBudget = 0,
+            }
+        else
+            config.thinkingConfig = {
+                thinkingLevel = options.reasoning_effort,
+            }
+        end
     end
 
     if next(config) == nil then
@@ -91,6 +128,10 @@ local function build_generation_config(options)
     end
     return config
 end
+
+-- ============================================================================
+-- Public API
+-- ============================================================================
 
 ---@param setup table
 ---@return table|nil
@@ -111,6 +152,11 @@ function M.new(setup)
     ---@return string|nil
     function driver.spec(request)
         local options = request.options or {}
+        local model = request.context.model
+        if options.reasoning_effort == 'none' and not supports_disabled_thinking(model) then
+            return nil, 'Gemini model ' .. tostring(model) .. ' does not support reasoning_effort = "none".'
+        end
+
         local system_text, remaining = split_system_message(request.messages or {})
 
         local payload = {
@@ -149,11 +195,7 @@ function M.new(setup)
         end
 
         local action = request.context.stream and 'streamGenerateContent?alt=sse' or 'generateContent'
-        local url = string.format(
-            'https://generativelanguage.googleapis.com/v1beta/models/%s:%s',
-            request.context.model,
-            action
-        )
+        local url = string.format('https://generativelanguage.googleapis.com/v1beta/models/%s:%s', model, action)
 
         return {
             url = url,
