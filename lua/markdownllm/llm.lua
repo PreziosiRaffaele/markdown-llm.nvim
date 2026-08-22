@@ -129,14 +129,23 @@ function M.send(request, callbacks)
     local buffer = ''
     local stderr_buffer = {}
     local aborted = false
+    local terminal_sent = false
     local stream_format = request.context.stream and (driver.stream_format or 'sse') or 'json'
+
+    local function schedule_terminal(callback)
+        if terminal_sent then
+            return
+        end
+        terminal_sent = true
+        vim.schedule(callback)
+    end
 
     local function abort_with_error(err)
         if aborted then
             return
         end
         aborted = true
-        vim.schedule(function()
+        schedule_terminal(function()
             on_error(err)
         end)
         if job_obj then
@@ -230,7 +239,7 @@ function M.send(request, callbacks)
         end
 
         if not aborted then
-            vim.schedule(on_complete)
+            schedule_terminal(on_complete)
         end
     end)
 
