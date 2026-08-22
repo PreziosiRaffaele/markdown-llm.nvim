@@ -12,13 +12,6 @@ local util = require('markdownllm.util')
 -- Local helpers
 -- ============================================================================
 
---- Return an action's configured name or the fallback used by shortcut keymaps.
----@param action table
----@return string
-local function get_action_name(action)
-    return action.name or '(unnamed action)'
-end
-
 -- ============================================================================
 -- Public API
 -- ============================================================================
@@ -115,11 +108,14 @@ function M.setup(opts)
     if config.actions and #config.actions > 0 then
         for _, action in ipairs(config.actions) do
             if action.shortcut then
-                local action_name = get_action_name(action)
-                local desc = 'Run action: ' .. action_name
-                local quoted_name = action_name:gsub('"', '\\"')
-                local cmd = string.format(":'<,'>MarkLLMRunAction %s<CR>", quoted_name)
-                vim.keymap.set('v', action.shortcut, cmd, { desc = desc })
+                if action.name then
+                    local desc = 'Run action: ' .. action.name
+                    local quoted_name = action.name:gsub('"', '\\"')
+                    local cmd = string.format(":'<,'>MarkLLMRunAction %s<CR>", quoted_name)
+                    vim.keymap.set('v', action.shortcut, cmd, { desc = desc })
+                else
+                    vim.keymap.set('v', action.shortcut, ":'<,'>MarkLLMRunAction<CR>", { desc = 'Run action' })
+                end
             end
         end
     end
