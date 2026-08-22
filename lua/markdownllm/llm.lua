@@ -8,6 +8,9 @@ local M = {}
 
 local driver_factory = require('markdownllm.driver_factory')
 local logger = require('markdownllm.logger')
+local util = require('markdownllm.util')
+
+local ERROR_BODY_MAX_LENGTH = 500
 
 -- ============================================================================
 -- Local helpers and types
@@ -109,7 +112,7 @@ function M.send(request, callbacks)
     logger.trace('LLM request url:', spec.url)
     logger.trace('LLM request body:', spec.body)
 
-    local cmd = { 'curl', '--silent', '--no-buffer', '-X', 'POST', spec.url }
+    local cmd = { 'curl', '--silent', '--no-buffer', '--fail-with-body', '-X', 'POST', spec.url }
     if request.context.timeout then
         local timeout_s = math.max(1, math.floor(request.context.timeout / 1000))
         table.insert(cmd, '--max-time')
@@ -211,6 +214,13 @@ function M.send(request, callbacks)
 
         if obj.code ~= 0 then
             local err_msg = table.concat(stderr_buffer, '')
+            local response_body = util.truncate_text(vim.trim(buffer), ERROR_BODY_MAX_LENGTH)
+            if response_body ~= '' then
+                if err_msg ~= '' and not err_msg:match('%s$') then
+                    err_msg = err_msg .. '\n'
+                end
+                err_msg = err_msg .. 'Response body: ' .. response_body
+            end
             if err_msg == '' then
                 err_msg = 'exit code ' .. obj.code
             end
