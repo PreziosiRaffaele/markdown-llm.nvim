@@ -8,6 +8,21 @@ local config_mod = require('markdownllm.config')
 local logger = require('markdownllm.logger')
 local util = require('markdownllm.util')
 
+-- ============================================================================
+-- Local helpers
+-- ============================================================================
+
+--- Return an action's configured name or the fallback used by shortcut keymaps.
+---@param action table
+---@return string
+local function get_action_name(action)
+    return action.name or '(unnamed action)'
+end
+
+-- ============================================================================
+-- Public API
+-- ============================================================================
+
 --- Configure MarkdownLLM and register commands + default keymaps.
 --- @tparam table|nil opts Configuration overrides merged into defaults.
 --- @treturn nil
@@ -100,8 +115,9 @@ function M.setup(opts)
     if config.actions and #config.actions > 0 then
         for _, action in ipairs(config.actions) do
             if action.shortcut then
-                local desc = action.name and ('Run action: ' .. action.name) or 'Run action'
-                local quoted_name = action.name:gsub('"', '\\"')
+                local action_name = get_action_name(action)
+                local desc = 'Run action: ' .. action_name
+                local quoted_name = action_name:gsub('"', '\\"')
                 local cmd = string.format(":'<,'>MarkLLMRunAction %s<CR>", quoted_name)
                 vim.keymap.set('v', action.shortcut, cmd, { desc = desc })
             end
