@@ -39,6 +39,10 @@ function M.setup(opts)
         util.safe_call(core.send_current_buffer)
     end, { desc = 'Send chat' })
 
+    vim.api.nvim_create_user_command('MarkLLMStop', function()
+        util.safe_call(core.stop_current_request)
+    end, { desc = 'Stop current chat request' })
+
     vim.api.nvim_create_user_command('MarkLLMRunAction', function(command_opts)
         util.safe_call(function()
             local action_name = command_opts.fargs[1]
@@ -73,6 +77,10 @@ function M.setup(opts)
 
     if config.keymaps and config.keymaps.sendChat then
         vim.keymap.set('n', config.keymaps.sendChat, ':MarkLLMSendChat<CR>', { desc = 'Send chat' })
+    end
+
+    if config.keymaps and config.keymaps.stopChat then
+        vim.keymap.set('n', config.keymaps.stopChat, ':MarkLLMStop<CR>', { desc = 'Stop current chat request' })
     end
 
     if config.keymaps and config.keymaps.selectChatSetup then

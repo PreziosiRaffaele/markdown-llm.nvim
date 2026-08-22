@@ -11,6 +11,8 @@ local logger = require('markdownllm.logger')
 local ui = require('markdownllm.ui')
 local util = require('markdownllm.util')
 local ns_action = vim.api.nvim_create_namespace('markdownllm_action')
+---@type table<integer, markdownllm.LLMAbortHandle>
+local in_flight_requests = {}
 
 -- ============================================================================
 -- Local helpers
@@ -414,11 +416,17 @@ local function send_request(bufnr)
 
     logger.info('Sending request to Provider: ' .. setup.provider .. ', Model:' .. setup.model)
 
+    local request_finished = false
+    local function clear_in_flight_request()
+        request_finished = true
+        in_flight_requests[bufnr] = nil
+    end
+
     local send_ok, send_err = pcall(function()
         local started = false
         local request = build_request(setup, system_text, messages)
 
-        llm.send(request, {
+        local abort_handle = llm.send(request, {
             on_chunk = function(response_text)
                 if not vim.api.nvim_buf_is_valid(bufnr) then
                     return
@@ -433,10 +441,12 @@ local function send_request(bufnr)
                 end
             end,
             on_complete = function()
+                clear_in_flight_request()
                 cleanup_request_state(bufnr, loading_mark)
                 logger.info('Response appended to markdownLLM chat.')
             end,
             on_error = function(msg)
+                clear_in_flight_request()
                 append_text_at_end(bufnr, msg)
                 cleanup_request_state(bufnr, loading_mark)
                 logger.error(msg)
@@ -445,8 +455,13 @@ local function send_request(bufnr)
                 logger.warn(msg)
             end,
         })
+
+        if not request_finished then
+            in_flight_requests[bufnr] = abort_handle
+        end
     end)
     if not send_ok then
+        clear_in_flight_request()
         append_text_at_end(bufnr, tostring(send_err))
         cleanup_request_state(bufnr, loading_mark)
         logger.error('MarkdownLLM send failed: ' .. tostring(send_err))
@@ -617,6 +632,20 @@ end
 function M.send_current_buffer()
     local bufnr = vim.api.nvim_get_current_buf()
     send_request(bufnr)
+end
+
+---Stop the in-flight chat request for the current buffer.
+---@return nil
+function M.stop_current_request()
+    local bufnr = vim.api.nvim_get_current_buf()
+    local abort_handle = in_flight_requests[bufnr]
+    if not abort_handle then
+        logger.warn('No MarkdownLLM request in flight for this buffer.')
+        return
+    end
+
+    abort_handle.abort()
+    logger.info('Abort requested...')
 end
 
 ---Create a chat from the visual selection and send it.

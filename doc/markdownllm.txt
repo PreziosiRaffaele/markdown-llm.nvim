@@ -31,6 +31,7 @@ Requires Neovim >= 0.10.
     keymaps = {
       newChat = "<leader>mn",
       sendChat = "<leader>ms",
+      stopChat = "<leader>mx",
       selectChatSetup = "<leader>mc",
       selectDefaultSetup = "<leader>md",
       actions = "<leader>ma",
@@ -48,6 +49,9 @@ Commands                                                     *markdownllm-comman
 
 :MarkLLMSendChat
     Send the current chat buffer to the provider.
+
+:MarkLLMStop
+    Stop the in-flight chat request for the current buffer.
 
 :MarkLLMRunAction
     Send the current visual selection using an action. When called without an
@@ -143,6 +147,7 @@ keymaps
 Keymap fields:
     newChat
     sendChat
+    stopChat
     selectChatSetup
     selectDefaultSetup
     actions
