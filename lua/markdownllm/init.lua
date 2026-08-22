@@ -33,37 +33,37 @@ function M.setup(opts)
 
     vim.api.nvim_create_user_command('MarkLLMNewChat', function()
         util.safe_call(core.new_chat_workflow)
-    end, { desc = 'New chat' })
+    end, { desc = 'New chat', force = true })
 
     vim.api.nvim_create_user_command('MarkLLMSendChat', function()
         util.safe_call(core.send_current_buffer)
-    end, { desc = 'Send chat' })
+    end, { desc = 'Send chat', force = true })
 
     vim.api.nvim_create_user_command('MarkLLMRunAction', function(command_opts)
         util.safe_call(function()
             local action_name = command_opts.fargs[1]
             core.action_from_visual(action_name)
         end)
-    end, { range = true, nargs = '?', desc = 'Run action' })
+    end, { range = true, nargs = '?', desc = 'Run action', force = true })
 
     vim.api.nvim_create_user_command('MarkLLMSelectBufferSetup', function()
         util.safe_call(function()
             local buffer = vim.api.nvim_get_current_buf()
             core.select_buffer_setup(buffer)
         end)
-    end, { desc = 'Select chat setup' })
+    end, { desc = 'Select chat setup', force = true })
 
     vim.api.nvim_create_user_command('MarkLLMSelectDefaultSetup', function()
         util.safe_call(core.select_default_setup)
-    end, { desc = 'Select default setup' })
+    end, { desc = 'Select default setup', force = true })
 
     vim.api.nvim_create_user_command('MarkLLMSaveChat', function()
         util.safe_call(core.save_current_buffer)
-    end, { desc = 'Save chat' })
+    end, { desc = 'Save chat', force = true })
 
     vim.api.nvim_create_user_command('MarkLLMResumeChat', function()
         util.safe_call(core.resume_saved_chat)
-    end, { desc = 'Resume chat' })
+    end, { desc = 'Resume chat', force = true })
 
     -- Keymaps
 
