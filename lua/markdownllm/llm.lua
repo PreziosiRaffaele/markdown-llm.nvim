@@ -11,6 +11,8 @@ local logger = require('markdownllm.logger')
 local util = require('markdownllm.util')
 
 local ERROR_BODY_MAX_LENGTH = 500
+local FAIL_WITH_BODY_MIN_VERSION = { 7, 76, 0 }
+local fail_with_body_supported = nil
 
 -- ============================================================================
 -- Local helpers and types
@@ -52,6 +54,47 @@ local ERROR_BODY_MAX_LENGTH = 500
 
 ---@class markdownllm.LLMAbortHandle
 ---@field abort fun()
+
+---@param major integer
+---@param minor integer
+---@param patch integer
+---@return boolean
+local function supports_fail_with_body_version(major, minor, patch)
+    local version = { major, minor, patch }
+    for index, minimum in ipairs(FAIL_WITH_BODY_MIN_VERSION) do
+        if version[index] ~= minimum then
+            return version[index] > minimum
+        end
+    end
+    return true
+end
+
+---Detect whether the installed curl supports --fail-with-body.
+---@return boolean
+local function curl_supports_fail_with_body()
+    if fail_with_body_supported ~= nil then
+        return fail_with_body_supported
+    end
+
+    fail_with_body_supported = false
+    local ok, result = pcall(function()
+        return vim.system({ 'curl', '--version' }, { text = true }):wait()
+    end)
+    if ok and result and result.code == 0 and type(result.stdout) == 'string' then
+        local major, minor, patch = result.stdout:match('^curl (%d+)%.(%d+)%.(%d+)')
+        local major_number = tonumber(major)
+        local minor_number = tonumber(minor)
+        local patch_number = tonumber(patch)
+        if major_number and minor_number and patch_number then
+            fail_with_body_supported = supports_fail_with_body_version(major_number, minor_number, patch_number)
+        end
+    end
+
+    if not fail_with_body_supported then
+        logger.debug('curl --fail-with-body is unavailable; falling back to legacy HTTP handling.')
+    end
+    return fail_with_body_supported
+end
 
 ---@param body table
 ---@return string
@@ -112,7 +155,11 @@ function M.send(request, callbacks)
     logger.trace('LLM request url:', spec.url)
     logger.trace('LLM request body:', spec.body)
 
-    local cmd = { 'curl', '--silent', '--no-buffer', '--fail-with-body', '-X', 'POST', spec.url }
+    local cmd = { 'curl', '--silent', '--no-buffer' }
+    if curl_supports_fail_with_body() then
+        table.insert(cmd, '--fail-with-body')
+    end
+    vim.list_extend(cmd, { '-X', 'POST', spec.url })
     if request.context.timeout then
         local timeout_s = math.max(1, math.floor(request.context.timeout / 1000))
         table.insert(cmd, '--max-time')
