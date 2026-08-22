@@ -51,6 +51,7 @@ test('LLM engine asks curl to fail with the response body', function()
     local original_system = vim.system
     local original_schedule = vim.schedule
     local captured_cmd = nil
+    local version_checks = 0
 
     package.loaded['markdownllm.driver_factory'] = {
         get = function()
@@ -72,6 +73,14 @@ test('LLM engine asks curl to fail with the response body', function()
         callback()
     end
     vim.system = function(cmd, opts, on_exit)
+        if cmd[2] == '--version' then
+            version_checks = version_checks + 1
+            return {
+                wait = function()
+                    return { code = 0, stdout = 'curl 7.76.0 test' }
+                end,
+            }
+        end
         captured_cmd = cmd
         opts.stdout(nil, '{"error":{"message":"Invalid API key"}}')
         opts.stderr(nil, 'curl: (22) The requested URL returned error: 401\n')
@@ -93,6 +102,7 @@ test('LLM engine asks curl to fail with the response body', function()
     package.loaded['markdownllm.llm'] = original_llm
 
     assert(vim.list_contains(captured_cmd, '--fail-with-body'), 'curl must fail on non-2xx responses')
+    assert_same(version_checks, 1, 'curl support must be detected once')
     assert_contains(reported_error, 'curl: (22)', 'Transport errors must remain visible')
     assert_contains(reported_error, 'Invalid API key', 'The response body must reach the caller')
 end)
