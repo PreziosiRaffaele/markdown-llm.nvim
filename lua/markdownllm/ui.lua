@@ -29,6 +29,11 @@ local action_kinds = {
 function M.select_preset(on_select)
     local presets = config_mod.config.presets or {}
     if not presets or #presets == 0 then
+        local ok, default_setup_or_err = pcall(config_mod.get_default_setup)
+        if not ok then
+            logger.error(default_setup_or_err)
+            return
+        end
         on_select(nil)
         return
     end
