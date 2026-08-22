@@ -61,6 +61,14 @@ function M.parse_event(event, opts)
                 return nil, label .. ' JSON decode error: ' .. json_str, 'warning'
             end
 
+            if type(body) == 'table' and body.type == 'error' then
+                local message = body.message
+                if message == nil or message == vim.NIL then
+                    message = vim.inspect(body)
+                end
+                return nil, label .. ' API error: ' .. tostring(message), 'fatal'
+            end
+
             local api_error = provider_util.extract_api_error(body)
             if api_error then
                 return nil, label .. ' API error: ' .. api_error, 'fatal'
