@@ -482,7 +482,7 @@ local function run_replace_action(action, execution, setup, system_text)
         llm.send(request, {
             on_chunk = function(chunk)
                 if chunk and chunk ~= '' then
-                    response_text = chunk
+                    response_text = response_text .. chunk
                 end
             end,
             on_complete = function()
