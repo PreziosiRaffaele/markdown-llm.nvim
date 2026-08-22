@@ -83,6 +83,7 @@ The only optional suggestion is to use [render-markdown.nvim](https://github.com
     keymaps = {
       newChat = "<leader>mn",
       sendChat = "<leader>ms",
+      stopChat = "<leader>mx",
       selectChatSetup = "<leader>mc",
       selectDefaultSetup = "<leader>md",
       actions = "<leader>ma",
@@ -116,6 +117,7 @@ require("markdownllm").setup({
   keymaps = {
     newChat = "<leader>mn",
     sendChat = "<leader>ms",
+    stopChat = "<leader>mx",
     selectChatSetup = "<leader>mc",
     selectDefaultSetup = "<leader>md",
     actions = "<leader>ma",
@@ -129,6 +131,7 @@ require("markdownllm").setup({
 
 - `:MarkLLMNewChat` open a new chat buffer (optionally with a preset).
 - `:MarkLLMSendChat` send the current chat buffer to the provider.
+- `:MarkLLMStop` stop the in-flight chat request for the current buffer.
 - `:MarkLLMRunAction` send the current visual selection using a configured action or the built-in `Custom prompt...` flow.
 - `:MarkLLMSelectBufferSetup` set the setup for the current buffer.
 - `:MarkLLMSelectDefaultSetup` set the default setup for new buffers.
@@ -170,6 +173,7 @@ Help docs are available in `doc/markdownllm.txt` after running `:helptags`.
 - `keymaps` optional command bindings:
   - `newChat`
   - `sendChat`
+  - `stopChat`
   - `selectChatSetup`
   - `selectDefaultSetup`
   - `actions`
