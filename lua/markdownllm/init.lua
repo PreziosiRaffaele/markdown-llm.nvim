@@ -29,14 +29,6 @@ function M.setup(opts)
         log_file_path = config.log_file_path,
     })
 
-    -- Validate default setup
-
-    local ok, err = pcall(config_mod.get_default_setup)
-    if not ok then
-        logger.error(err)
-        return
-    end
-
     -- Create User Commands
 
     vim.api.nvim_create_user_command('MarkLLMNewChat', function()
