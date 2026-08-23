@@ -124,14 +124,15 @@ require("markdownllm").setup({
 })
 ```
 
-Note: if `default_setup_name` does not match one of your setup names, `setup()` shows an error notification and no `:MarkLLM*` commands are registered.
+Commands are registered even if `default_setup_name` is missing or invalid. In that case, the preset picker marks affected presets as invalid, and setup-dependent commands report the configuration error when used.
 
 ### 3. Start your first chat
 
-1. Run `:MarkLLMNewChat`: a new Markdown buffer opens with YAML frontmatter mirroring your setup.
-2. Type your message under `## User`.
-3. Run `:MarkLLMSendChat` to stream the response into the buffer.
-4. Edit any part of the conversation - frontmatter included - and send again.
+1. Run `:MarkLLMNewChat` and select the `Chat` preset.
+2. A new Markdown buffer opens with YAML frontmatter mirroring your setup.
+3. Type your message under `## User`.
+4. Run `:MarkLLMSendChat` to stream the response into the buffer.
+5. Edit any part of the conversation - frontmatter included - and send again.
 
 That is all you need. Keymaps, additional presets, actions, and multiple providers are optional refinements described below.
 
@@ -181,7 +182,7 @@ With other plugin managers, pass the same `opts` table to `require("markdownllm"
 
 ## Commands
 
-- `:MarkLLMNewChat` open a new chat buffer (optionally with a preset).
+- `:MarkLLMNewChat` choose a configured preset and open a new chat buffer.
 - `:MarkLLMSendChat` send the current chat buffer to the provider.
 - `:MarkLLMStop` stop the in-flight chat request for the current buffer.
 - `:MarkLLMRunAction` send the current visual selection using a configured action or the built-in `Custom prompt...` flow.
@@ -214,7 +215,7 @@ Help docs are available in `doc/markdownllm.txt` after running `:helptags`.
   - `setup` setup name override; defaults to `default_setup_name`.
 - `actions` list of actions used for visual selection prompts:
   - `name` label shown in the action selector.
-  - `preset` preset name to open; defaults to the first preset.
+  - `preset` preset name to use; when omitted, the action uses the default setup.
   - `type` `chat` (default) or `replace`.
   - `language` optional code fence language for legacy `type = "code"` compatibility; defaults to the current buffer filetype.
   - `pre_text` text prepended before the selection.
@@ -230,7 +231,7 @@ Help docs are available in `doc/markdownllm.txt` after running `:helptags`.
   - `selectDefaultSetup`
   - `actions`
   - `saveChat`
-- `resumeChat`
+  - `resumeChat`
 
 ## Chat YAML frontmatter
 
@@ -382,7 +383,7 @@ disabled; MarkdownLLM never substitutes a lower effort or the model default:
 - Grok does not currently support disabling reasoning, so `"none"` is rejected
   before the request is sent. Existing supported effort values are unchanged.
 
-Other providers can be added per request. Raise an issue or PR to add a new provider.
+Additional providers require a driver implementation. Raise an issue or PR to add one.
 
 ## Troubleshooting
 

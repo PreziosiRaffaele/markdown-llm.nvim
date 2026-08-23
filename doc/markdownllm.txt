@@ -46,7 +46,7 @@ Requires curl on your PATH and an API key for your chosen provider.
 Commands                                                     *markdownllm-commands*
 
 :MarkLLMNewChat
-    Open a new chat buffer (optionally with a preset).
+    Choose a configured preset and open a new chat buffer.
 
 :MarkLLMSendChat
     Send the current chat buffer to the provider.
@@ -123,7 +123,8 @@ presets
 actions
     List of actions used for visual selection prompts. Each action is a table with:
       name      (string) label shown in the action selector.
-      preset    (string|nil) preset name to open; defaults to first preset.
+      preset    (string|nil) preset name to use; when omitted, the action uses
+                the default setup.
       type      (string|nil) "chat" (default) or "replace".
                 "chat" opens a new chat buffer and "replace" replaces the
                 selection with the model response after showing a temporary
@@ -213,7 +214,8 @@ substitute a lower effort or the provider default.
       rejected before they are sent. Existing supported effort values are
       unchanged.
 
-Other providers can be added per request. Raise an issue or PR to add a new provider.
+Additional providers require a driver implementation. Raise an issue or PR to
+add one.
 
 ==============================================================================
 LLM Engine                                                     *markdownllm-llm*
