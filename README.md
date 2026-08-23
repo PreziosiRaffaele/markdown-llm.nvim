@@ -49,12 +49,95 @@ Actions let you send a visual selection through a predefined prompt, making comm
 
 ## Install
 
-MarkdownLLM is lightweight completely written in Lua. 
+MarkdownLLM is lightweight, completely written in Lua.
 It has no dependencies on other plugins.
-Requires Neovim >= 0.10.
 The only optional suggestion is to use [render-markdown.nvim](https://github.com/MeanderingProgrammer/render-markdown.nvim) to render markdown in the chat buffer.
 
-### lazy.nvim
+Requirements:
+
+- Neovim >= 0.10
+- `curl` available on your `PATH`
+- An API key for your chosen provider
+
+### 1. Set your provider API key
+
+API keys are read from environment variables at request time. Export the one matching your provider before starting Neovim:
+
+```sh
+export OPENAI_API_KEY="sk-..."
+# or GEMINI_API_KEY, GROK_API_KEY, DEEPSEEK_API_KEY, ...
+```
+
+Add the export line to your shell profile (`~/.zshrc`, `~/.bashrc`, ...) to make it permanent.
+The variable name is chosen per setup via the `api_key_name` option.
+
+### 2. Install and configure
+
+For your first chat, define one entry in `setups`, point `default_setup_name` at it, and add one prompt preset.
+
+#### lazy.nvim
+
+```lua
+{
+  "PreziosiRaffaele/markdown-llm.nvim",
+  -- optional markdown renderer
+  dependencies = {
+    {
+      "MeanderingProgrammer/render-markdown.nvim",
+    },
+  },
+  opts = {
+    default_setup_name = "default",
+    setups = {
+      {
+        name = "default",
+        provider = "openai",
+        model = "gpt-5.6",
+        api_key_name = "OPENAI_API_KEY",
+      },
+    },
+    presets = {
+      { name = "Chat", instruction = "" },
+    },
+  },
+}
+```
+
+#### Other plugin managers
+
+Add `PreziosiRaffaele/markdown-llm.nvim` (and optionally `MeanderingProgrammer/render-markdown.nvim`) as you normally would, then call the setup function in your config:
+
+```lua
+require("markdownllm").setup({
+  default_setup_name = "default",
+  setups = {
+    {
+      name = "default",
+      provider = "openai",
+      model = "gpt-5.6",
+      api_key_name = "OPENAI_API_KEY",
+    },
+  },
+  presets = {
+    { name = "Chat", instruction = "" },
+  },
+})
+```
+
+Note: if `default_setup_name` does not match one of your setup names, `setup()` shows an error notification and no `:MarkLLM*` commands are registered.
+
+### 3. Start your first chat
+
+1. Run `:MarkLLMNewChat`: a new Markdown buffer opens with YAML frontmatter mirroring your setup.
+2. Type your message under `## User`.
+3. Run `:MarkLLMSendChat` to stream the response into the buffer.
+4. Edit any part of the conversation - frontmatter included - and send again.
+
+That is all you need. Keymaps, additional presets, actions, and multiple providers are optional refinements described below.
+
+### Full configuration example
+
+With lazy.nvim:
 
 ```lua
 {
@@ -72,7 +155,7 @@ The only optional suggestion is to use [render-markdown.nvim](https://github.com
       {
         name = "default",
         provider = "openai",
-        model = "gpt-5.2",
+        model = "gpt-5.6",
         api_key_name = "OPENAI_API_KEY",
       },
     },
@@ -94,38 +177,7 @@ The only optional suggestion is to use [render-markdown.nvim](https://github.com
 }
 ```
 
-### Other plugin managers
-
-Add `PreziosiRaffaele/markdown-llm.nvim` (and optionally `MeanderingProgrammer/render-markdown.nvim`) as you normally would, then call the setup function in your config:
-
-```lua
-require("markdownllm").setup({
-  log_level = vim.log.levels.INFO,
-  default_setup_name = "default",
-  setups = {
-    {
-      name = "default",
-      provider = "openai",
-      model = "gpt-5.2",
-      api_key_name = "OPENAI_API_KEY",
-    },
-  },
-  presets = {
-    { name = "Chat", instruction = "" },
-  },
-  actions = {},
-  keymaps = {
-    newChat = "<leader>mn",
-    sendChat = "<leader>ms",
-    stopChat = "<leader>mx",
-    selectChatSetup = "<leader>mc",
-    selectDefaultSetup = "<leader>md",
-    actions = "<leader>ma",
-    saveChat = "<leader>mw",
-    resumeChat = "<leader>mr",
-  },
-})
-```
+With other plugin managers, pass the same `opts` table to `require("markdownllm").setup(opts)`.
 
 ## Commands
 
@@ -187,7 +239,7 @@ Each chat buffer starts with YAML frontmatter that mirrors the setup. Edit it di
 ```yaml
 ---
 provider: openai
-model: gpt-5.2
+model: gpt-5.6
 api_key_name: OPENAI_API_KEY
 temperature: 0.2
 max_tokens: 800
@@ -202,9 +254,9 @@ reasoning_effort: xhigh
 ```lua
 setups = {
   {
-    name = "OpenAI-5.2",
+    name = "OpenAI-5.6",
     provider = "openai",
-    model = "gpt-5.2",
+    model = "gpt-5.6",
     api_key_name = "OPENAI_API_KEY",
     reasoning_effort = "xhigh"
   },
@@ -336,19 +388,17 @@ Other providers can be added per request. Raise an issue or PR to add a new prov
 
 ### Logs
 
-To enable file logging, set `log_to_file = true` in your setup and optionally
+To enable file logging, set `log_to_file = true` in your plugin configuration and optionally
 override `log_file_path`. The default log path is
 `stdpath("cache")/markdownllm.log`. To debug API calls, set
 `log_level = vim.log.levels.DEBUG` to log request and raw response bodies.
 
-Example:
+Add these fields to your existing `opts` table, or to the table already passed to `require("markdownllm").setup()`:
 
 ```lua
-require("markdownllm").setup({
-  log_level = vim.log.levels.DEBUG,
-  log_to_file = true,
-  log_file_path = vim.fn.stdpath("cache") .. "/markdownllm.log",
-})
+log_level = vim.log.levels.DEBUG,
+log_to_file = true,
+log_file_path = vim.fn.stdpath("cache") .. "/markdownllm.log",
 ```
 
 ## License
