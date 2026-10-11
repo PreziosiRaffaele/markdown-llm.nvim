@@ -219,9 +219,11 @@ Help docs are available in `doc/markdownllm.txt` after running `:helptags`.
   - `type` `chat` (default) or `replace`.
   - `language` optional code fence language for legacy `type = "code"` compatibility; defaults to the current buffer filetype.
   - `pre_text` text prepended before the selection.
+  - `window` where a `chat` action opens its chat; same values as `chat_window`, defaulting to it.
   - legacy aliases `text`, `code`, and `replace_visual` are still accepted and mapped to `chat`, `chat`, and `replace`.
   - unsupported action types now fall back to `chat`.
   - legacy `type = "code"` still forces fenced code rendering.
+- `chat_window` where new chats open: `current` (default), `split`, `vsplit`, or `float`. Applies to `:MarkLLMNewChat` and to `chat` actions without a `window` field.
 - `chat_save_dir` directory for saved chats (default: `stdpath("data")/markdownllm/chats`).
 - `keymaps` optional command bindings:
   - `newChat`
@@ -341,6 +343,7 @@ actions = {
     name = "Explain Code",
     preset = "Software Development",
     type = "chat",
+    window = "float",
     language = "lua",
     pre_text = "Explain what this code does:\n\n",
   },
@@ -355,6 +358,7 @@ actions = {
 
 Notes:
 - `type = "replace"` shows a temporary `Replacing...` marker above the target and then replaces the selected text in-place with the model response.
+- `window = "float"` opens the chat in a centered float, which suits quick questions about the selection. Press `q` to close it; closing the float aborts its in-flight request, and the chat buffer stays hidden so you can still show it again or save it.
 - `shortcut` adds a visual-mode keymap for the action, bypassing the action picker.
 - `:MarkLLMRunAction` always adds a built-in `Custom prompt...` entry to the action picker. It uses the default setup, prompts for freeform instructions, then asks whether to run as `chat` or `replace`.
 - Legacy `type = "code"` still forces fenced code rendering.

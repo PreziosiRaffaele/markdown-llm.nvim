@@ -10,6 +10,7 @@ local llm = require('markdownllm.llm')
 local logger = require('markdownllm.logger')
 local ui = require('markdownllm.ui')
 local util = require('markdownllm.util')
+local window = require('markdownllm.window')
 local ns_action = vim.api.nvim_create_namespace('markdownllm_action')
 ---@type table<integer, markdownllm.LLMAbortHandle>
 local in_flight_requests = {}
@@ -344,12 +345,36 @@ local function clear_action_marks(bufnr, marks)
     end
 end
 
+---Abort the buffer's in-flight request when the given window closes.
+---A closed float hides its chat buffer, so streaming into it would be wasted.
+---@param bufnr integer
+---@param winid integer
+---@return nil
+local function abort_request_on_window_close(bufnr, winid)
+    vim.api.nvim_create_autocmd('WinClosed', {
+        pattern = tostring(winid),
+        once = true,
+        callback = function()
+            local abort_handle = in_flight_requests[bufnr]
+            if abort_handle then
+                abort_handle.abort()
+                logger.info('Chat window closed; abort requested.')
+            end
+        end,
+    })
+end
+
 ---Open a new chat buffer for a preset.
 ---@param preset table
+---@param placement markdownllm.WindowPlacement|nil where to open the chat; defaults to `config.chat_window`
 ---@return integer
-local function open_chat(preset)
-    vim.cmd('enew')
-    local bufnr = vim.api.nvim_get_current_buf()
+local function open_chat(preset, placement)
+    placement = placement or config_mod.config.chat_window
+    local bufnr = vim.api.nvim_create_buf(true, false)
+    local winid = window.open(bufnr, placement)
+    if placement == 'float' then
+        abort_request_on_window_close(bufnr, winid)
+    end
 
     vim.bo[bufnr].filetype = 'markdown'
     vim.bo[bufnr].buftype = 'nofile'
@@ -368,7 +393,7 @@ local function open_chat(preset)
     if not has_content then
         local template = buffer.chat_template(preset and preset.instruction, buffer_setup)
         vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, template)
-        vim.api.nvim_win_set_cursor(0, { #template, 0 })
+        vim.api.nvim_win_set_cursor(winid, { #template, 0 })
     else
         local _, update_err = buffer.update_setup_in_buffer(bufnr, buffer_setup)
         if update_err then
@@ -546,7 +571,7 @@ end
 ---@return nil
 local function run_chat_action(preset, action, execution)
     local user_text = build_action_user_text(action, execution.selection_text, execution.filetype)
-    local chat_bufnr = open_chat(preset)
+    local chat_bufnr = open_chat(preset, action.window)
     buffer.replace_last_user_block(chat_bufnr, user_text)
     send_request(chat_bufnr)
 end

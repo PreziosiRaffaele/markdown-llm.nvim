@@ -134,11 +134,20 @@ actions
                 filetype when omitted.
       pre_text  (string|nil) text prepended before the selection.
       shortcut  (string|nil) visual-mode keymap to run the action directly.
+      window    (string|nil) where a "chat" action opens its chat; same values
+                as chat_window. Defaults to chat_window.
     Legacy aliases "text", "code", and "replace_visual" are still accepted.
     "code" maps to "chat" and forces fenced code rendering.
     Unsupported action types fall back to "chat".
     The :MarkLLMRunAction picker also includes a built-in "Custom prompt..."
     entry. It is not configured in this list and always uses the default setup.
+
+chat_window
+    Where new chats open: "current" (default), "split", "vsplit", or "float".
+    Applies to :MarkLLMNewChat and to "chat" actions without a window field.
+    A float is centered and covers 80% of the editor; press q to close it.
+    Closing a float aborts its in-flight request. The chat buffer stays
+    hidden, so it can still be shown again and saved with :MarkLLMSaveChat.
 
 chat_save_dir
     Directory for saved chats (default: stdpath("data") .. "/markdownllm/chats").

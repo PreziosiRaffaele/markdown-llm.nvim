@@ -84,6 +84,9 @@ function M.select_action(on_select)
                 end
                 label = string.format('%s  [%s]', label, normalized_type)
             end
+            if item.window then
+                label = string.format('%s  [window: %s]', label, item.window)
+            end
             return label
         end,
     }, function(choice)
