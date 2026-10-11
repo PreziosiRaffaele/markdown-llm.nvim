@@ -57,7 +57,7 @@ Requirements:
 
 - Neovim >= 0.10
 - `curl` available on your `PATH`
-- An API key for your chosen provider
+- An API key for your chosen provider, or a ChatGPT subscription logged in through the Codex CLI (see [Using a ChatGPT subscription](#using-a-chatgpt-subscription-openai-codex))
 
 ### 1. Set your provider API key
 
@@ -201,9 +201,10 @@ Help docs are available in `doc/markdownllm.txt` after running `:helptags`.
 - `default_setup_name` name of the default setup used for new chats.
 - `setups` list of provider/model setups:
   - `name` unique label used in selectors.
-  - `provider` provider name: `openai`, `gemini`, `grok`, `deepseek`.
+  - `provider` provider name: `openai`, `openai-codex`, `gemini`, `grok`, `deepseek`.
   - `model` model id passed to the provider.
-  - `api_key_name` environment variable containing the API key.
+  - `api_key_name` environment variable containing the API key (not used by `openai-codex`).
+  - `auth_file` Codex CLI credentials file used by `openai-codex` (default: `$CODEX_HOME/auth.json`, then `~/.codex/auth.json`).
   - `base_url` optional override for the selected provider endpoint.
   - `timeout` optional request timeout in milliseconds.
   - `temperature`, `max_tokens`, `top_p`, `stop`, `frequency_penalty`, `presence_penalty`, `seed`, `reasoning_effort` model parameters. Set `reasoning_effort = "none"` to strictly request disabled thinking; support depends on the provider and model.
@@ -364,6 +365,7 @@ Notes:
 The following providers are currently supported:
 
 - `OpenAI (Responses API)`
+- `OpenAI Codex (ChatGPT subscription)`
 - `xAI (Responses API)`
 - `DeepSeek (chat-completions-compatible)`
 - `Google (Gemini)`
@@ -382,6 +384,33 @@ disabled; MarkdownLLM never substitutes a lower effort or the model default:
   models are rejected before the request is sent.
 - Grok does not currently support disabling reasoning, so `"none"` is rejected
   before the request is sent. Existing supported effort values are unchanged.
+
+### Using a ChatGPT subscription (`openai-codex`)
+
+The `openai-codex` provider sends chats to the ChatGPT Codex backend, so they are billed to your ChatGPT Plus/Pro subscription instead of an API key.
+
+1. Install the [Codex CLI](https://github.com/openai/codex) and run `codex login`, choosing **Sign in with ChatGPT**.
+2. Add a setup without `api_key_name`:
+
+```lua
+{
+  name = "Codex",
+  provider = "openai-codex",
+  model = "gpt-5.6-sol",
+  reasoning_effort = "high",
+}
+```
+
+How it works:
+
+- Credentials are read from the Codex CLI auth file (`$CODEX_HOME/auth.json`, else `~/.codex/auth.json`; override with `auth_file`). MarkdownLLM never modifies that file.
+- MarkdownLLM does not refresh tokens: refresh tokens rotate on use, so refreshing them here would log the Codex CLI out. When the access token expires (about every 10 days), send one message in `codex` (or run `codex login` again) so the Codex CLI refreshes it, then send again.
+- Model ids are the ones your plan exposes in Codex, which differ from the public API ids.
+- `reasoning_effort`, `max_tokens` (sent as `max_output_tokens`), and `web_search` are sent. `temperature`, `top_p`, `stop`, `frequency_penalty`, `presence_penalty`, and `seed` are ignored with a warning, because the backend rejects them.
+- The `# System` section is sent as instructions; when it is empty, a minimal default is used because the backend requires one.
+
+> [!WARNING]
+> The Codex backend is not a documented public API. It may change without notice, and OpenAI does not officially support third-party clients using it. Use the `openai` provider with an API key for a supported integration.
 
 Additional providers require a driver implementation. Raise an issue or PR to add one.
 

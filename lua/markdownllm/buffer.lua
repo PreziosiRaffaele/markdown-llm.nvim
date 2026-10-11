@@ -12,6 +12,7 @@ local setup_field_order = {
     'provider',
     'model',
     'api_key_name',
+    'auth_file',
     'base_url',
     'timeout',
     'temperature',
@@ -371,6 +372,7 @@ function M.serialize_setup_to_yaml(setup)
     add_field('provider', setup.provider, true)
     add_field('model', setup.model, true)
     add_field('api_key_name', setup.api_key_name, false)
+    add_field('auth_file', setup.auth_file, false)
     add_field('base_url', setup.base_url, false)
     add_field('timeout', setup.timeout, false)
     add_field('temperature', setup.temperature, false)

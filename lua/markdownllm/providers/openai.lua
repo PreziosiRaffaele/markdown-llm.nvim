@@ -11,92 +11,19 @@ local responses = require('markdownllm.providers.responses')
 
 local DEFAULT_BASE_URL = 'https://api.openai.com/v1/responses'
 
-local UNSUPPORTED_OPTIONS = {
-    'stop',
-    'frequency_penalty',
-    'presence_penalty',
-    'seed',
+local OPTIONS_SPEC = {
+    label = 'OpenAI Responses',
+    unsupported = {
+        'stop',
+        'frequency_penalty',
+        'presence_penalty',
+        'seed',
+    },
 }
 
----@param messages markdownllm.LLMRequestMessage[]
----@return string|nil
----@return table
-local function build_input(messages)
-    local instructions = nil
-    local input = {}
-
-    for _, message in ipairs(messages or {}) do
-        if instructions == nil and message.role == 'system' then
-            instructions = message.content
-        else
-            table.insert(input, {
-                role = message.role,
-                content = message.content,
-            })
-        end
-    end
-
-    return instructions, input
-end
-
----@param event_type string|nil
----@param body table|nil
----@return string|nil
-local function event_to_text(event_type, body)
-    if event_type == 'response.output_text.delta' then
-        return body and body.delta or nil
-    end
-    return nil
-end
-
----@param options table|nil
----@return table
----@return string[]
-local function normalize_options(options)
-    if type(options) ~= 'table' then
-        return {}, {}
-    end
-
-    local normalized = {}
-    local warnings = {}
-
-    if options.temperature ~= nil then
-        normalized.temperature = options.temperature
-    end
-
-    if options.top_p ~= nil then
-        normalized.top_p = options.top_p
-    end
-
-    if options.max_tokens ~= nil then
-        normalized.max_output_tokens = options.max_tokens
-    end
-
-    if options.reasoning_effort ~= nil then
-        normalized.reasoning = {
-            effort = options.reasoning_effort,
-        }
-    end
-
-    if options.web_search == true then
-        normalized.tools = {
-            { type = 'web_search_preview' },
-        }
-    end
-
-    local ignored = {}
-    for _, key in ipairs(UNSUPPORTED_OPTIONS) do
-        if options[key] ~= nil then
-            table.insert(ignored, key)
-        end
-    end
-
-    if #ignored > 0 then
-        table.insert(warnings, 'OpenAI Responses ignores unsupported options: ' .. table.concat(ignored, ', ') .. '.')
-    end
-
-    return normalized, warnings
-end
+-- ============================================================================
+-- Public API
+-- ============================================================================
 
 ---@param setup table
 ---@return table|nil
@@ -118,8 +45,8 @@ function M.new(setup)
     ---@return table|nil
     ---@return string|nil
     function driver.spec(request)
-        local instructions, input = build_input(request.messages)
-        local options, warnings = normalize_options(request.options)
+        local instructions, input = responses.build_input(request.messages)
+        local options, warnings = responses.map_options(request.options, OPTIONS_SPEC)
 
         local payload = {
             model = request.context.model,
@@ -153,7 +80,7 @@ function M.new(setup)
     function driver.parse(event)
         return responses.parse_event(event, {
             label = label,
-            event_to_text = event_to_text,
+            event_to_text = responses.output_text_delta,
         })
     end
 

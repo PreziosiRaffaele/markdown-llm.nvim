@@ -183,6 +183,7 @@ local function build_request(setup, system_text, messages)
             stream = true,
             timeout = setup.timeout,
             api_key_name = setup.api_key_name,
+            auth_file = setup.auth_file,
             base_url = setup.base_url,
         },
         messages = request_messages,
