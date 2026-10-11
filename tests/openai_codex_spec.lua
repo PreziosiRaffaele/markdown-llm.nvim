@@ -290,6 +290,18 @@ test('A whole SSE body is joined into one text for non-streaming actions', funct
     assert_same(text, 'Hello', 'Only deltas must be joined, without duplicating done events')
 end)
 
+test('SSE keep-alive comments are ignored', function()
+    local driver = new_driver()
+    local text, err, severity = driver.parse(': keep-alive')
+    assert_same({ text, err, severity }, {}, 'A comment-only event must produce neither text nor error')
+
+    text, err = driver.parse(
+        ': keep-alive\nevent: response.output_text.delta\ndata: {"type":"response.output_text.delta","delta":"Hi"}'
+    )
+    assert_same(err, nil, 'Comments mixed with data must not error')
+    assert_same(text, 'Hi', 'Data next to a comment must still be parsed')
+end)
+
 test('response.failed aborts with the backend error', function()
     local driver = new_driver()
     local text, err, severity = driver.parse(
