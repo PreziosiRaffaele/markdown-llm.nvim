@@ -57,6 +57,33 @@ local function to_set(keys)
     return set
 end
 
+---Describe a terminal response that ended without completing.
+---`response.failed` carries its error in `response.error`, not the top-level `error`.
+---@param body table
+---@return string|nil failure Message for a failed response.
+---@return string|nil incomplete Reason for an incomplete (truncated) response.
+local function terminal_problem(body)
+    local response = type(body.response) == 'table' and body.response or body
+    local is_failed = body.type == 'response.failed' or (body.type == nil and response.status == 'failed')
+    local is_incomplete = body.type == 'response.incomplete' or (body.type == nil and response.status == 'incomplete')
+
+    if is_failed then
+        local response_error = response.error
+        if type(response_error) == 'table' and type(response_error.message) == 'string' then
+            return response_error.message, nil
+        end
+        return 'response failed', nil
+    end
+
+    if is_incomplete then
+        local details = response.incomplete_details
+        local reason = type(details) == 'table' and details.reason or nil
+        return nil, type(reason) == 'string' and reason or 'unknown reason'
+    end
+
+    return nil, nil
+end
+
 -- ============================================================================
 -- Public API
 -- ============================================================================
@@ -159,33 +186,6 @@ function M.extract_output_text(body)
     end
 
     return table.concat(fragments, '')
-end
-
----Describe a terminal response that ended without completing.
----`response.failed` carries its error in `response.error`, not the top-level `error`.
----@param body table
----@return string|nil failure Message for a failed response.
----@return string|nil incomplete Reason for an incomplete (truncated) response.
-local function terminal_problem(body)
-    local response = type(body.response) == 'table' and body.response or body
-    local is_failed = body.type == 'response.failed' or (body.type == nil and response.status == 'failed')
-    local is_incomplete = body.type == 'response.incomplete' or (body.type == nil and response.status == 'incomplete')
-
-    if is_failed then
-        local response_error = response.error
-        if type(response_error) == 'table' and type(response_error.message) == 'string' then
-            return response_error.message, nil
-        end
-        return 'response failed', nil
-    end
-
-    if is_incomplete then
-        local details = response.incomplete_details
-        local reason = type(details) == 'table' and details.reason or nil
-        return nil, type(reason) == 'string' and reason or 'unknown reason'
-    end
-
-    return nil, nil
 end
 
 ---@class markdownllm.ResponsesParseOptions
