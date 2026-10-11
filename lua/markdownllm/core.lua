@@ -373,14 +373,17 @@ local function open_chat(preset, placement)
     placement = placement or config_mod.config.chat_window
     local bufnr = vim.api.nvim_create_buf(true, false)
     local winid = window.open(bufnr, placement)
-    if placement == 'float' then
-        abort_request_on_window_close(bufnr, winid)
-    end
 
     vim.bo[bufnr].filetype = 'markdown'
     vim.bo[bufnr].buftype = 'nofile'
     vim.bo[bufnr].bufhidden = 'hide'
     vim.bo[bufnr].swapfile = false
+
+    -- After filetype setup, so FileType callbacks cannot override the close key.
+    if placement == 'float' then
+        window.map_close_key(bufnr, winid)
+        abort_request_on_window_close(bufnr, winid)
+    end
 
     local setup = config_mod.resolve_preset_setup(preset)
     local buffer_setup = vim.deepcopy(setup)
