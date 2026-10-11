@@ -205,9 +205,14 @@ function M.parse_event(event, opts)
     local event_name = nil
     local label = opts.label
     local incomplete_warning = nil
+    local saw_comment = false
 
     for line in event:gmatch('[^\r\n]+') do
-        if vim.startswith(line, 'event:') then
+        -- SSE comment lines (e.g. `: keep-alive`) keep idle connections open
+        -- while the model thinks; they carry no data.
+        if vim.startswith(line, ':') then
+            saw_comment = true
+        elseif vim.startswith(line, 'event:') then
             event_name = vim.trim(line:sub(7))
         elseif vim.startswith(line, 'data: ') then
             saw_data = true
@@ -258,6 +263,10 @@ function M.parse_event(event, opts)
             return text, incomplete_warning, 'warning'
         end
         return text
+    end
+
+    if saw_comment then
+        return nil
     end
 
     local ok, body = pcall(vim.json.decode, event)
