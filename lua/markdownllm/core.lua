@@ -551,16 +551,13 @@ local function run_chat_action(preset, action, execution)
     send_request(chat_bufnr)
 end
 
----Run a configured action using the current visual selection.
+---Run a configured action against an already captured visual selection.
 ---@param action table
+---@param visual_selection_context table
 ---@return nil
-local function run_action(action)
-    if not action then
-        return
-    end
-
-    local visual_selection_context = get_visual_selection_context()
-    if not visual_selection_context then
+local function run_action_on_selection(action, visual_selection_context)
+    if not vim.api.nvim_buf_is_valid(visual_selection_context.bufnr) then
+        logger.warn('The buffer of the visual selection is no longer available.')
         return
     end
 
@@ -586,9 +583,31 @@ local function run_action(action)
     end
 end
 
+---Run a configured action using the current visual selection.
+---@param action table
+---@return nil
+local function run_action(action)
+    if not action then
+        return
+    end
+
+    local visual_selection_context = get_visual_selection_context()
+    if not visual_selection_context then
+        return
+    end
+
+    run_action_on_selection(action, visual_selection_context)
+end
+
 ---Prompt for a custom action and run it against the current visual selection.
 ---@return nil
 local function prompted_action_from_visual()
+    -- Capture the selection before the prompt window takes focus.
+    local visual_selection_context = get_visual_selection_context()
+    if not visual_selection_context then
+        return
+    end
+
     ui.prompt_action_text(function(input)
         local prompt_text = util.trim(input or '')
         if prompt_text == '' then
@@ -607,7 +626,7 @@ local function prompted_action_from_visual()
                 type = action_kind.type,
             }
 
-            run_action(action)
+            run_action_on_selection(action, visual_selection_context)
         end)
     end)
 end
