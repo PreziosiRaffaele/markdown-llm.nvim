@@ -24,11 +24,12 @@ llm.lua defines a clear interface for the request. The request is provider agnos
 
 | Property | Type | Description |
 | :--- | :--- | :--- |
-| **`provider`** | `string` | The identifier for the service to use (e.g., `"openai"`, `"deepseek"`, `"gemini"`).| 
+| **`provider`** | `string` | The identifier for the service to use (e.g., `"openai"`, `"openai-codex"`, `"deepseek"`, `"gemini"`).| 
 | **`model`** | `string` | The specific model ID to target (e.g., `"gpt-4-turbo"`, `"claude-3-opus-20240229"`). |
 | **`stream`** | `boolean` | If `true`, the engine expects SSE and calls `callbacks.on_chunk` incrementally. |
 | **`timeout`** | `integer` | *(Optional)* Timeout in milliseconds for the request connection/read. |
 | **`api_key_name`** | `string` | *(Optional)* Env var name to resolve the API key inside the driver. |
+| **`auth_file`** | `string` | *(Optional)* Codex CLI credentials file used by `openai-codex` (default `$CODEX_HOME/auth.json`, then `~/.codex/auth.json`). |
 | **`base_url`** | `string` | *(Optional)* Override for the selected provider endpoint. |
 
 #### 2. Messages (`request.messages`)
@@ -65,6 +66,7 @@ checks:
 | :--- | :--- |
 | DeepSeek | Models with the thinking toggle send `thinking = { type = "disabled" }` and omit top-level `reasoning_effort`. |
 | OpenAI Responses | Sends `reasoning = { effort = "none" }`; the API validates model support. |
+| OpenAI Codex | Same mapping as OpenAI Responses; the Codex backend validates model support. |
 | Gemini | Sends `thinkingConfig = { thinkingBudget = 0 }` for recognized Gemini 2.5 Flash and Flash-Lite models; rejects unsupported and unknown models locally. |
 | Grok Responses | Rejects the request locally because disabled reasoning is not supported. |
 
@@ -107,6 +109,14 @@ require("markdownllm.llm").send(req, {
   end,
 })
 ```
+
+## Subscription Credentials (`openai-codex`)
+The `openai-codex` driver authenticates with the ChatGPT credentials written by `codex login` instead of an API key.
+
+- `providers/openai_codex_auth.lua` reads the credentials file and returns the access token, account id, and expiry. It is strictly read-only: refresh tokens rotate on use, so refreshing them in MarkdownLLM would log the Codex CLI out. Expired tokens fail before the request with a message to send one message in `codex` (the CLI refreshes when it needs credentials and the token is near `exp`).
+- The driver reads credentials in `new`, which the factory calls for every request, so a token refreshed by the Codex CLI is picked up without restarting Neovim.
+- The backend only streams. For non-streaming requests the engine hands the full SSE body to `parse`, and the shared Responses parser joins every delta.
+- Shared Responses mapping (`build_input`, `map_options`, `parse_event`) lives in `providers/responses.lua`; each Responses driver only declares its endpoint, credentials, headers, and unsupported options.
 
 ## Class Diagram
 ```mermaid

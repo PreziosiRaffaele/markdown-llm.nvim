@@ -19,11 +19,12 @@ local fail_with_body_supported = nil
 -- ============================================================================
 
 ---@class markdownllm.LLMRequestContext
----@field provider string Provider key resolved by driver_factory (e.g. `openai`, `deepseek`, `gemini`, `grok`).
+---@field provider string Provider key resolved by driver_factory (e.g. `openai`, `openai-codex`, `deepseek`, `gemini`, `grok`).
 ---@field model string Provider model id. Gemini uses this in the URL path; OpenAI/Grok/DeepSeek use it in the payload.
 ---@field stream boolean When true, request streaming and parse SSE; when false, expect a single JSON response.
 ---@field timeout integer|nil Request timeout in milliseconds (mapped to curl --max-time, seconds, min 1).
----@field api_key_name string|nil Env var name containing the provider API key (required by all current drivers).
+---@field api_key_name string|nil Env var name containing the provider API key (required by all drivers except `openai-codex`).
+---@field auth_file string|nil Codex CLI credentials file used by `openai-codex` (default: $CODEX_HOME/auth.json or ~/.codex/auth.json).
 ---@field base_url string|nil Override base URL for the selected provider driver; ignored by Gemini unless its driver adds support.
 
 ---@class markdownllm.LLMRequestMessage
@@ -105,6 +106,28 @@ local function encode_json(body)
     return vim.fn.json_encode(body)
 end
 
+---Quote a value for a curl config file (backslash and double quote escaped).
+---@param value string
+---@return string
+local function quote_curl_config_value(value)
+    return '"' .. value:gsub('\\', '\\\\'):gsub('"', '\\"'):gsub('\n', '\\n'):gsub('\r', '\\r') .. '"'
+end
+
+---Build the curl config read from stdin with `--config -`.
+---Headers and body travel through stdin instead of argv so credentials do not
+---show up in the process list (`ps`) while a request is in flight.
+---@param headers table<string, string>|nil
+---@param body_json string
+---@return string
+local function build_curl_config(headers, body_json)
+    local lines = {}
+    for key, value in pairs(headers or {}) do
+        table.insert(lines, 'header = ' .. quote_curl_config_value(string.format('%s: %s', key, value)))
+    end
+    table.insert(lines, 'data = ' .. quote_curl_config_value(body_json))
+    return table.concat(lines, '\n') .. '\n'
+end
+
 ---@param callbacks markdownllm.LLMCallbacks
 ---@param name string
 ---@return function
@@ -165,12 +188,8 @@ function M.send(request, callbacks)
         table.insert(cmd, '--max-time')
         table.insert(cmd, tostring(timeout_s))
     end
-    for k, v in pairs(spec.headers or {}) do
-        table.insert(cmd, '-H')
-        table.insert(cmd, string.format('%s: %s', k, v))
-    end
-    table.insert(cmd, '-d')
-    table.insert(cmd, encode_json(spec.body))
+    vim.list_extend(cmd, { '--config', '-' })
+    local curl_config = build_curl_config(spec.headers, encode_json(spec.body))
     if spec.args then
         vim.list_extend(cmd, spec.args)
     end
@@ -213,6 +232,12 @@ function M.send(request, callbacks)
             return
         end
         local text, parse_err, severity = driver.parse(event)
+        -- Deliver text before a non-fatal warning so truncated output is kept.
+        if text and text ~= '' and severity ~= 'fatal' then
+            vim.schedule(function()
+                on_chunk(text)
+            end)
+        end
         if parse_err then
             if severity == 'fatal' then
                 abort_with_error(parse_err)
@@ -220,12 +245,6 @@ function M.send(request, callbacks)
             end
             vim.schedule(function()
                 on_warning(parse_err)
-            end)
-            return
-        end
-        if text and text ~= '' then
-            vim.schedule(function()
-                on_chunk(text)
             end)
         end
     end
@@ -250,6 +269,7 @@ function M.send(request, callbacks)
     end
 
     job_obj = vim.system(cmd, {
+        stdin = curl_config,
         stdout = function(_, data)
             if aborted or not data then
                 return

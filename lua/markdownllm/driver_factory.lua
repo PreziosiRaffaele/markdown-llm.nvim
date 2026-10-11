@@ -6,6 +6,7 @@
 local M = {}
 
 local openai = require('markdownllm.providers.openai')
+local openai_codex = require('markdownllm.providers.openai_codex')
 local openai_compatible = require('markdownllm.providers.openai_compatible')
 local grok = require('markdownllm.providers.grok')
 local providers = {
@@ -13,6 +14,7 @@ local providers = {
     openai = openai,
     grok = grok,
     deepseek = openai_compatible,
+    ['openai-codex'] = openai_codex,
 }
 
 --- Resolve a provider driver by name.
