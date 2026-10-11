@@ -107,6 +107,66 @@ test('LLM engine asks curl to fail with the response body', function()
     assert_contains(reported_error, 'Invalid API key', 'The response body must reach the caller')
 end)
 
+test('LLM engine ignores SSE keep-alive comments', function()
+    local original_driver_factory = package.loaded['markdownllm.driver_factory']
+    local original_llm = package.loaded['markdownllm.llm']
+    local original_system = vim.system
+    local original_schedule = vim.schedule
+    local parsed_events = {}
+
+    package.loaded['markdownllm.driver_factory'] = {
+        get = function()
+            return {
+                spec = function()
+                    return { url = 'https://example.test/v1/responses', body = {} }
+                end,
+                parse = function(event)
+                    table.insert(parsed_events, event)
+                    return nil
+                end,
+            }
+        end,
+    }
+    package.loaded['markdownllm.llm'] = nil
+    vim.schedule = function(callback)
+        callback()
+    end
+    vim.system = function(cmd, opts, on_exit)
+        if cmd[2] == '--version' then
+            return {
+                wait = function()
+                    return { code = 0, stdout = 'curl 7.76.0 test' }
+                end,
+            }
+        end
+        opts.stdout(nil, ': keep-alive\n\ndata: {"type":"a"}\n\n')
+        opts.stdout(nil, ': keep-alive\ndata: {"type":"b"}\n\n: keep-alive\n\n')
+        on_exit({ code = 0 })
+        return { kill = function() end }
+    end
+
+    local reported_error = nil
+    local completed = false
+    local llm = require('markdownllm.llm')
+    llm.send({ context = { provider = 'openai', stream = true } }, {
+        on_error = function(err)
+            reported_error = err
+        end,
+        on_complete = function()
+            completed = true
+        end,
+    })
+
+    vim.system = original_system
+    vim.schedule = original_schedule
+    package.loaded['markdownllm.driver_factory'] = original_driver_factory
+    package.loaded['markdownllm.llm'] = original_llm
+
+    assert_same(reported_error, nil, 'Keep-alive comments must not fail the request')
+    assert_same(completed, true, 'The request must complete')
+    assert_same(parsed_events, { 'data: {"type":"a"}', 'data: {"type":"b"}' }, 'Drivers must only see data events')
+end)
+
 if #failures > 0 then
     error(table.concat(failures, '\n\n'))
 end

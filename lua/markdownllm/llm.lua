@@ -105,6 +105,21 @@ local function encode_json(body)
     return vim.fn.json_encode(body)
 end
 
+---Remove SSE comment lines (those starting with `:`) from an event.
+---Servers send comments such as `: keep-alive` to hold the connection open;
+---they carry no data, so drivers must never see them.
+---@param event string
+---@return string
+local function strip_sse_comments(event)
+    local lines = {}
+    for line in vim.gsplit(event, '\n', { plain = true }) do
+        if not vim.startswith(line, ':') then
+            table.insert(lines, line)
+        end
+    end
+    return vim.trim(table.concat(lines, '\n'))
+end
+
 ---@param callbacks markdownllm.LLMCallbacks
 ---@param name string
 ---@return function
@@ -209,6 +224,9 @@ function M.send(request, callbacks)
     end
 
     local function handle_event(event)
+        if stream_format == 'sse' then
+            event = strip_sse_comments(event)
+        end
         if event == '' then
             return
         end
