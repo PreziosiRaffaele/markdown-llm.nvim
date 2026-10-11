@@ -23,6 +23,102 @@ local action_kinds = {
     },
 }
 
+-- ============================================================================
+-- Local helpers
+-- ============================================================================
+
+---Create a scratch buffer whose writes are intercepted instead of hitting disk.
+---@return integer bufnr
+local function create_prompt_buffer()
+    local bufnr = vim.api.nvim_create_buf(false, true)
+    -- `acwrite` lets `:w` succeed without a file, routing writes to BufWriteCmd.
+    vim.bo[bufnr].buftype = 'acwrite'
+    vim.bo[bufnr].bufhidden = 'wipe'
+    vim.bo[bufnr].swapfile = false
+    vim.bo[bufnr].filetype = 'markdown'
+    vim.api.nvim_buf_set_name(bufnr, string.format('markdownllm://prompt/%d', bufnr))
+    return bufnr
+end
+
+---Open a focused floating window centered in the editor, clamped to fit the screen.
+---@param bufnr integer
+---@param title string
+---@return integer winid
+local function open_centered_float(bufnr, title)
+    -- Reserve two cells per axis for the border.
+    local max_width = math.max(1, vim.o.columns - 2)
+    local max_height = math.max(1, vim.o.lines - vim.o.cmdheight - 2)
+    local width = math.min(max_width, math.max(40, math.floor(vim.o.columns * 0.6)))
+    local height = math.min(max_height, math.max(5, math.floor(vim.o.lines * 0.4)))
+    return vim.api.nvim_open_win(bufnr, true, {
+        relative = 'editor',
+        width = width,
+        height = height,
+        row = math.max(0, math.floor((max_height - height) / 2)),
+        col = math.max(0, math.floor((max_width - width) / 2)),
+        style = 'minimal',
+        border = 'rounded',
+        title = title,
+        title_pos = 'center',
+    })
+end
+
+---Wire the submit/cancel lifecycle of a prompt buffer shown in `winid`.
+---
+---`on_submit` fires exactly once, when the buffer is wiped: with the written text
+---if the window was closed with no unsaved changes, otherwise with `nil`.
+---@param bufnr integer
+---@param winid integer
+---@param on_submit fun(input: string|nil): nil
+---@return nil
+local function attach_prompt_lifecycle(bufnr, winid, on_submit)
+    local written_text = nil
+    local left_window = false
+    vim.api.nvim_create_autocmd('BufWriteCmd', {
+        buffer = bufnr,
+        callback = function()
+            written_text = table.concat(vim.api.nvim_buf_get_lines(bufnr, 0, -1, false), '\n')
+            vim.bo[bufnr].modified = false
+        end,
+    })
+    -- A float left behind would keep the prompt pending indefinitely, so leaving
+    -- it is treated as closing it.
+    vim.api.nvim_create_autocmd('WinLeave', {
+        buffer = bufnr,
+        callback = function()
+            vim.schedule(function()
+                -- Still open here means focus moved away rather than the window closing.
+                if vim.api.nvim_win_is_valid(winid) then
+                    left_window = true
+                    vim.api.nvim_win_close(winid, true)
+                end
+            end)
+        end,
+    })
+    vim.api.nvim_create_autocmd('BufWipeout', {
+        buffer = bufnr,
+        once = true,
+        callback = function()
+            -- Unsaved changes mean the user discarded the buffer (e.g. `:q!`).
+            local input = nil
+            if not left_window and not vim.bo[bufnr].modified then
+                input = written_text
+            end
+            -- Defer so the callback runs after the float is gone and focus is back
+            -- on the originating window.
+            vim.schedule(function()
+                util.safe_call(function()
+                    on_submit(input)
+                end)
+            end)
+        end,
+    })
+end
+
+-- ============================================================================
+-- Public API
+-- ============================================================================
+
 ---Prompt the user to select a preset.
 ---@param on_select fun(preset: table|nil): nil
 ---@return nil
@@ -96,17 +192,18 @@ function M.select_action(on_select)
     end)
 end
 
----Prompt the user for freeform action text.
+---Open a floating scratch window for freeform action text.
+---
+---The text is submitted when the window closes with no unsaved changes
+---(`:wq`, `:x`, or `:w` followed by `:q`). Closing with unsaved changes (`:q!`)
+---or moving focus out of the window cancels with `nil`.
 ---@param on_submit fun(input: string|nil): nil
 ---@return nil
 function M.prompt_action_text(on_submit)
-    vim.ui.input({
-        prompt = 'MarkdownLLM prompt > ',
-    }, function(input)
-        util.safe_call(function()
-            on_submit(input)
-        end)
-    end)
+    local bufnr = create_prompt_buffer()
+    local winid = open_centered_float(bufnr, ' MarkdownLLM prompt (:wq to send, :q! to cancel) ')
+    attach_prompt_lifecycle(bufnr, winid, on_submit)
+    vim.cmd('startinsert')
 end
 
 ---Prompt the user to select a built-in action kind.

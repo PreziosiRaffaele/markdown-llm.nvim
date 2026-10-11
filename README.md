@@ -361,7 +361,7 @@ Notes:
 - `type = "replace"` shows a temporary `Replacing...` marker above the target and then replaces the selected text in-place with the model response.
 - `window = "float"` opens the chat in a centered float, which suits quick questions about the selection. Press `q` to close it; closing the float aborts its in-flight request, and the chat buffer stays hidden so you can still show it again or save it.
 - `shortcut` adds a visual-mode keymap for the action, bypassing the action picker.
-- `:MarkLLMRunAction` always adds a built-in `Custom prompt...` entry to the action picker. It uses the default setup, prompts for freeform instructions, then asks whether to run as `chat` or `replace`.
+- `:MarkLLMRunAction` always adds a built-in `Custom prompt...` entry to the action picker. It uses the default setup, opens a floating markdown window for freeform instructions (`:wq` to send; `:q!` or leaving the window cancels), then asks whether to run as `chat` or `replace`.
 - Legacy `type = "code"` still forces fenced code rendering.
 
 ## Providers
