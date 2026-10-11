@@ -11,6 +11,8 @@ local default_config = {
     presets = {},
     actions = {},
     keymaps = {},
+    -- Where new chats open: 'current', 'split', 'vsplit', or 'float'.
+    chat_window = 'current',
     chat_save_dir = vim.fn.stdpath('data') .. '/markdownllm/chats',
 }
 
