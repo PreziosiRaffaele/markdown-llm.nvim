@@ -65,7 +65,7 @@ API keys are read from environment variables at request time. Export the one mat
 
 ```sh
 export OPENAI_API_KEY="sk-..."
-# or GEMINI_API_KEY, GROK_API_KEY, DEEPSEEK_API_KEY, ...
+# or CLAUDE_API_KEY, GEMINI_API_KEY, GROK_API_KEY, DEEPSEEK_API_KEY, ...
 ```
 
 Add the export line to your shell profile (`~/.zshrc`, `~/.bashrc`, ...) to make it permanent.
@@ -201,15 +201,17 @@ Help docs are available in `doc/markdownllm.txt` after running `:helptags`.
 - `default_setup_name` name of the default setup used for new chats.
 - `setups` list of provider/model setups:
   - `name` unique label used in selectors.
-  - `provider` provider name: `openai`, `openai-codex`, `gemini`, `grok`, `deepseek`.
+  - `provider` provider name: `openai`, `openai-codex`, `claude`, `gemini`, `grok`, `deepseek`.
   - `model` model id passed to the provider.
   - `api_key_name` environment variable containing the API key (not used by `openai-codex`).
   - `auth_file` Codex CLI credentials file used by `openai-codex` (default: `$CODEX_HOME/auth.json`, then `~/.codex/auth.json`).
   - `base_url` optional override for the selected provider endpoint.
+  - `workspace_id` Claude workspace sent as `anthropic-workspace-id`; needed only for API keys that are not scoped to one workspace.
   - `timeout` optional request timeout in milliseconds.
   - `temperature`, `max_tokens`, `top_p`, `stop`, `frequency_penalty`, `presence_penalty`, `seed`, `reasoning_effort` model parameters. Set `reasoning_effort = "none"` to strictly request disabled thinking; support depends on the provider and model.
   - `web_search` enable provider web search tool when supported.
   - OpenAI uses the Responses API: `max_tokens` maps to `max_output_tokens`; `stop`, `frequency_penalty`, `presence_penalty`, and `seed` are currently ignored with a warning.
+  - Claude uses the Messages API: `max_tokens` defaults to 32000; `temperature`, `top_p`, `frequency_penalty`, `presence_penalty`, and `seed` are ignored with a warning.
 - `presets` list of prompt presets used to seed new chats:
   - `name` label shown in the preset selector.
   - `instruction` content injected under the `# System` section.
@@ -370,6 +372,7 @@ The following providers are currently supported:
 
 - `OpenAI (Responses API)`
 - `OpenAI Codex (ChatGPT subscription)`
+- `Anthropic (Claude Messages API)`
 - `xAI (Responses API)`
 - `DeepSeek (chat-completions-compatible)`
 - `Google (Gemini)`
@@ -386,8 +389,29 @@ disabled; MarkdownLLM never substitutes a lower effort or the model default:
 - Gemini maps `"none"` to `thinkingConfig.thinkingBudget = 0` for recognized
   Gemini 2.5 Flash and Flash-Lite models. Gemini 2.5 Pro, Gemini 3, and unknown
   models are rejected before the request is sent.
+- Claude maps `"none"` to `thinking = { type = "disabled" }` and lets the API
+  validate model support (Claude Opus 5.5 and Sonnet 5.5, for example, reject
+  it). Other values are sent as `output_config.effort` with adaptive thinking.
 - Grok does not currently support disabling reasoning, so `"none"` is rejected
   before the request is sent. Existing supported effort values are unchanged.
+
+### Claude (`claude`)
+
+```lua
+{
+  name = "Claude Opus",
+  provider = "claude",
+  model = "claude-opus-5-5",
+  api_key_name = "CLAUDE_API_KEY",
+  reasoning_effort = "medium",
+}
+```
+
+- Requests go to the Messages API with `anthropic-version: 2026-10-21`. That version rejects `temperature`, `top_p`, and `top_k` on every model, so MarkdownLLM drops them (and the other unsupported options) with a warning.
+- `max_tokens` is required by the API and defaults to 32000. Thinking counts against it, so keep it generous.
+- `stop` is sent as `stop_sequences`. `web_search = true` enables the `web_search_20260209` server tool (Claude 4.6 and later models).
+- A response cut short (`max_tokens`, context window, or the web search loop limit), or declined by a safety classifier (`refusal`), keeps the text received so far and shows a warning.
+- If your API key is not scoped to a single workspace, set `workspace_id` to the workspace to use.
 
 ### Using a ChatGPT subscription (`openai-codex`)
 

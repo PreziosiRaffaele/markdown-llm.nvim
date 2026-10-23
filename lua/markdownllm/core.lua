@@ -186,6 +186,7 @@ local function build_request(setup, system_text, messages)
             api_key_name = setup.api_key_name,
             auth_file = setup.auth_file,
             base_url = setup.base_url,
+            workspace_id = setup.workspace_id,
         },
         messages = request_messages,
         options = extract_options_from_setup(setup),
