@@ -24,13 +24,14 @@ llm.lua defines a clear interface for the request. The request is provider agnos
 
 | Property | Type | Description |
 | :--- | :--- | :--- |
-| **`provider`** | `string` | The identifier for the service to use (e.g., `"openai"`, `"openai-codex"`, `"deepseek"`, `"gemini"`).| 
-| **`model`** | `string` | The specific model ID to target (e.g., `"gpt-4-turbo"`, `"claude-3-opus-20240229"`). |
+| **`provider`** | `string` | The identifier for the service to use (e.g., `"openai"`, `"openai-codex"`, `"claude"`, `"deepseek"`, `"gemini"`).| 
+| **`model`** | `string` | The specific model ID to target (e.g., `"gpt-4-turbo"`, `"claude-opus-5-5"`). |
 | **`stream`** | `boolean` | If `true`, the engine expects SSE and calls `callbacks.on_chunk` incrementally. |
 | **`timeout`** | `integer` | *(Optional)* Timeout in milliseconds for the request connection/read. |
 | **`api_key_name`** | `string` | *(Optional)* Env var name to resolve the API key inside the driver. |
 | **`auth_file`** | `string` | *(Optional)* Codex CLI credentials file used by `openai-codex` (default `$CODEX_HOME/auth.json`, then `~/.codex/auth.json`). |
 | **`base_url`** | `string` | *(Optional)* Override for the selected provider endpoint. |
+| **`workspace_id`** | `string` | *(Optional)* Claude workspace sent as `anthropic-workspace-id`, for API keys not scoped to one workspace. |
 
 #### 2. Messages (`request.messages`)
 *The core payload representing the conversation history. This follows the standard chat-completion format.*
@@ -56,7 +57,7 @@ Array of message objects, where each object contains:
 | **`presence_penalty`** | `float` | Penalizes new tokens based on whether they appear in the text so far (typically -2.0 to 2.0). |
 | **`seed`** | `integer` | If specified, the system will make a best effort to sample deterministically. |
 | **`reasoning_effort`** | `string` | Provider-agnostic reasoning effort. The special value `"none"` strictly requests disabled thinking and fails when the provider or model cannot honor it. |
-| **`web_search`** | `boolean` | When `true`, OpenAI enables `web_search_preview`, Gemini enables Google Search, Grok enables `web_search`, and DeepSeek ignores it with a warning. |
+| **`web_search`** | `boolean` | When `true`, OpenAI enables `web_search_preview`, Gemini enables Google Search, Grok enables `web_search`, Claude enables `web_search_20260209`, and DeepSeek ignores it with a warning. |
 
 `reasoning_effort` is a stable public option, not a promise that provider
 values are interchangeable. Drivers own the native mapping and capability
@@ -68,6 +69,7 @@ checks:
 | OpenAI Responses | Sends `reasoning = { effort = "none" }`; the API validates model support. |
 | OpenAI Codex | Same mapping as OpenAI Responses; the Codex backend validates model support. |
 | Gemini | Sends `thinkingConfig = { thinkingBudget = 0 }` for recognized Gemini 2.5 Flash and Flash-Lite models; rejects unsupported and unknown models locally. |
+| Claude Messages | Sends `thinking = { type = "disabled" }` with no effort; the API validates model support. |
 | Grok Responses | Rejects the request locally because disabled reasoning is not supported. |
 
 An omitted effort preserves provider defaults. Non-`"none"` values keep their

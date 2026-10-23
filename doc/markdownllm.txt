@@ -96,8 +96,8 @@ default_setup_name
 setups
     List of provider/model setups. Each setup is a table with:
       name          (string) unique label used in selectors.
-      provider      (string) provider name: "openai", "openai-codex", "gemini",
-                   "grok", "deepseek".
+      provider      (string) provider name: "openai", "openai-codex", "claude",
+                   "gemini", "grok", "deepseek".
       model         (string) model id passed to the provider.
       api_key_name  (string) environment variable containing the API key.
                    Not used by "openai-codex".
@@ -105,6 +105,9 @@ setups
                    "openai-codex". Defaults to $CODEX_HOME/auth.json, then
                    ~/.codex/auth.json.
       base_url      (string|nil) optional override for the selected provider endpoint.
+      workspace_id  (string|nil) Claude workspace sent as
+                   anthropic-workspace-id; needed only for API keys that are
+                   not scoped to one workspace.
       timeout       (number|nil) optional request timeout in milliseconds.
       temperature   (number|nil) model temperature.
       max_tokens    (number|nil) model max tokens.
@@ -120,6 +123,9 @@ setups
       OpenAI uses the Responses API: max_tokens maps to max_output_tokens;
                    stop, frequency_penalty, presence_penalty, and seed are
                    currently ignored with a warning.
+      Claude uses the Messages API: max_tokens defaults to 32000;
+                   temperature, top_p, frequency_penalty, presence_penalty,
+                   and seed are ignored with a warning.
 
 presets
     List of prompt presets used to seed new chats. Each preset is a table with:

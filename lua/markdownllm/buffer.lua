@@ -14,6 +14,7 @@ local setup_field_order = {
     'api_key_name',
     'auth_file',
     'base_url',
+    'workspace_id',
     'timeout',
     'temperature',
     'max_tokens',
@@ -374,6 +375,7 @@ function M.serialize_setup_to_yaml(setup)
     add_field('api_key_name', setup.api_key_name, false)
     add_field('auth_file', setup.auth_file, false)
     add_field('base_url', setup.base_url, false)
+    add_field('workspace_id', setup.workspace_id, false)
     add_field('timeout', setup.timeout, false)
     add_field('temperature', setup.temperature, false)
     add_field('max_tokens', setup.max_tokens, false)

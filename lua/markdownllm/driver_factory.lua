@@ -14,6 +14,7 @@ local providers = {
     openai = openai,
     grok = grok,
     deepseek = openai_compatible,
+    claude = require('markdownllm.providers.claude'),
     ['openai-codex'] = openai_codex,
 }
 

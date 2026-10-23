@@ -19,13 +19,14 @@ local fail_with_body_supported = nil
 -- ============================================================================
 
 ---@class markdownllm.LLMRequestContext
----@field provider string Provider key resolved by driver_factory (e.g. `openai`, `openai-codex`, `deepseek`, `gemini`, `grok`).
+---@field provider string Provider key resolved by driver_factory (e.g. `openai`, `openai-codex`, `deepseek`, `gemini`, `grok`, `claude`).
 ---@field model string Provider model id. Gemini uses this in the URL path; OpenAI/Grok/DeepSeek use it in the payload.
 ---@field stream boolean When true, request streaming and parse SSE; when false, expect a single JSON response.
 ---@field timeout integer|nil Request timeout in milliseconds (mapped to curl --max-time, seconds, min 1).
 ---@field api_key_name string|nil Env var name containing the provider API key (required by all drivers except `openai-codex`).
 ---@field auth_file string|nil Codex CLI credentials file used by `openai-codex` (default: $CODEX_HOME/auth.json or ~/.codex/auth.json).
 ---@field base_url string|nil Override base URL for the selected provider driver; ignored by Gemini unless its driver adds support.
+---@field workspace_id string|nil Workspace sent as `anthropic-workspace-id` by `claude`; needed for API keys not scoped to one workspace.
 
 ---@class markdownllm.LLMRequestMessage
 ---@field role string 'system'|'user'|'assistant'. Gemini consumes only the first system message as a system instruction.
