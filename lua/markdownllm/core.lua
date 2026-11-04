@@ -368,12 +368,12 @@ end
 
 ---Open a new chat buffer for a preset.
 ---@param preset table
----@param placement markdownllm.WindowPlacement|nil where to open the chat; defaults to `config.chat_window`
+---@param placement markdownllm.WindowPlacement|nil where to open the chat; see `window.resolve` for how `config.chat_window` fills it in
 ---@return integer
 local function open_chat(preset, placement)
-    placement = placement or config_mod.config.chat_window
+    local window_options = window.resolve(placement, config_mod.config.chat_window)
     local bufnr = vim.api.nvim_create_buf(true, false)
-    local winid = window.open(bufnr, placement)
+    local winid = window.open(bufnr, window_options)
 
     vim.bo[bufnr].filetype = 'markdown'
     vim.bo[bufnr].buftype = 'nofile'
@@ -381,7 +381,7 @@ local function open_chat(preset, placement)
     vim.bo[bufnr].swapfile = false
 
     -- After filetype setup, so FileType callbacks cannot override the close key.
-    if placement == 'float' then
+    if window_options.layout == 'float' then
         window.map_close_key(bufnr, winid)
         abort_request_on_window_close(bufnr, winid)
     end

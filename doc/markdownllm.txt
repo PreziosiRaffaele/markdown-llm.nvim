@@ -147,8 +147,10 @@ actions
                 filetype when omitted.
       pre_text  (string|nil) text prepended before the selection.
       shortcut  (string|nil) visual-mode keymap to run the action directly.
-      window    (string|nil) where a "chat" action opens its chat; same values
-                as chat_window. Defaults to chat_window.
+      window    (string|table|nil) where a "chat" action opens its chat; same
+                values as chat_window. A missing layout comes from
+                chat_window, and its sizes apply only when both use the same
+                layout.
     Legacy aliases "text", "code", and "replace_visual" are still accepted.
     "code" maps to "chat" and forces fenced code rendering.
     Unsupported action types fall back to "chat".
@@ -158,7 +160,14 @@ actions
 chat_window
     Where new chats open: "current" (default), "split", "vsplit", or "float".
     Applies to :MarkLLMNewChat and to "chat" actions without a window field.
-    A float is centered and covers 80% of the editor; press q to close it.
+    Use a table to set the size:
+      chat_window = { layout = "vsplit", width = 0.4, height = 0.3 }
+    A size up to 1 is a fraction of the editor; a larger size is a number of
+    columns or rows. width applies to "vsplit" and "float", and height to
+    "split" and "float". Other layouts ignore them. Splits default to an even
+    split, and floats to 80% of the editor. Split sizes are capped at 80% of
+    the editor, and floats are capped to fit on screen with their border.
+    A float is centered; press q to close it.
     Closing a float aborts its in-flight request. The chat buffer stays
     hidden, so it can still be shown again and saved with :MarkLLMSaveChat.
 
