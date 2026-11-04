@@ -222,11 +222,16 @@ Help docs are available in `doc/markdownllm.txt` after running `:helptags`.
   - `type` `chat` (default) or `replace`.
   - `language` optional code fence language for legacy `type = "code"` compatibility; defaults to the current buffer filetype.
   - `pre_text` text prepended before the selection.
-  - `window` where a `chat` action opens its chat; same values as `chat_window`, defaulting to it.
+  - `window` where a `chat` action opens its chat; same values as `chat_window`. A missing layout comes from `chat_window`, and its sizes apply only when both use the same layout.
   - legacy aliases `text`, `code`, and `replace_visual` are still accepted and mapped to `chat`, `chat`, and `replace`.
   - unsupported action types now fall back to `chat`.
   - legacy `type = "code"` still forces fenced code rendering.
 - `chat_window` where new chats open: `current` (default), `split`, `vsplit`, or `float`. Applies to `:MarkLLMNewChat` and to `chat` actions without a `window` field.
+  - Use a table to set the size, for example `{ layout = "vsplit", width = 0.4, height = 0.3 }`.
+  - A size up to `1` is a fraction of the editor; a larger size is a number of columns or rows.
+  - `width` applies to `vsplit` and `float`, and `height` to `split` and `float`. Other layouts ignore them.
+  - Splits default to an even split, and floats to 80% of the editor.
+  - Split sizes are capped at 80% of the editor, and floats are capped to fit on screen with their border.
 - `chat_save_dir` directory for saved chats (default: `stdpath("data")/markdownllm/chats`).
 - `keymaps` optional command bindings:
   - `newChat`

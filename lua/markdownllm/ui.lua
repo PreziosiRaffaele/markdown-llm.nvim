@@ -6,6 +6,7 @@ local M = {}
 local config_mod = require('markdownllm.config')
 local logger = require('markdownllm.logger')
 local util = require('markdownllm.util')
+local window = require('markdownllm.window')
 local custom_prompt_action = {
     markdownllm_kind = 'custom_prompt',
     name = 'Custom prompt...',
@@ -180,8 +181,9 @@ function M.select_action(on_select)
                 end
                 label = string.format('%s  [%s]', label, normalized_type)
             end
-            if item.window then
-                label = string.format('%s  [window: %s]', label, item.window)
+            local layout = window.resolve(item.window).layout
+            if layout then
+                label = string.format('%s  [window: %s]', label, layout)
             end
             return label
         end,
